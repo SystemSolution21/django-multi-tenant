@@ -35,6 +35,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "django_tenants",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -45,9 +46,11 @@ INSTALLED_APPS = [
     "django_filters",
     "blog.apps.BlogConfig",
     "tasks.apps.TasksConfig",
+    "tenants.apps.TenantsConfig",
 ]
 
 MIDDLEWARE = [
+    "django_tenants.middleware.main.TenantMainMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -79,17 +82,6 @@ WSGI_APPLICATION = "core.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": "sprinty",
-#         "USER": "sprinty",
-#         "PASSWORD": "complexpassword123",
-#         "HOST": "localhost",
-#         "PORT": "5432",
-#     }
-# }
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -101,6 +93,18 @@ DATABASES = {
     }
 }
 
+# Multi-tenancy settings
+DATABASE_ROUTERS = ["django_tenants.routers.TenantSyncRouter"]
+
+BASE_DOMAIN = "localhost"
+
+PUBLIC_SCHEMA_NAME = "public"
+
+AUTH_USER_MODEL = "tenants.User"
+
+TENANT_MODEL = "tenants.Tenant"
+
+TENANT_DOMAIN_MODEL = "tenants.Domain"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

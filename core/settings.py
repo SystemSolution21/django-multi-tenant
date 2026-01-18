@@ -43,12 +43,12 @@ SHARED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "django_filters",
+    "tenants.apps.TenantsConfig",
     "blog.apps.BlogConfig",
-    "tasks.apps.TasksConfig",
 ]
 
 # Application definition (tenant apps only)
-TENANT_APPS = ["tenants.apps.TenantsConfig"]
+TENANT_APPS = ["tasks.apps.TasksConfig"]
 
 # Application definition (public/shared apps and tenant apps)
 INSTALLED_APPS = list(SHARED_APPS) + [

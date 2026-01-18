@@ -32,9 +32,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# Application definition
-
-INSTALLED_APPS = [
+# Application definition (public/shared apps only)
+SHARED_APPS = [
     "django_tenants",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -46,7 +45,14 @@ INSTALLED_APPS = [
     "django_filters",
     "blog.apps.BlogConfig",
     "tasks.apps.TasksConfig",
-    "tenants.apps.TenantsConfig",
+]
+
+# Application definition (tenant apps only)
+TENANT_APPS = ["tenants.apps.TenantsConfig"]
+
+# Application definition (public/shared apps and tenant apps)
+INSTALLED_APPS = list(SHARED_APPS) + [
+    app for app in TENANT_APPS if app not in SHARED_APPS
 ]
 
 MIDDLEWARE = [
@@ -61,6 +67,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "core.urls"
+PUBLIC_SCHEMA_URLCONF = "core.urls_public"
 
 TEMPLATES = [
     {

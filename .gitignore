@@ -12,6 +12,3 @@ venv/
 staticfiles
 
 .DS_Store
-
-# Database configuration
-database.txt

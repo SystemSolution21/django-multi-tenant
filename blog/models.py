@@ -16,4 +16,4 @@ class Article(TimeStampedModel):
     content = models.TextField()
 
     def __str__(self) -> str:
-        return f"{self.title}"
+        return self.title

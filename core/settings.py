@@ -34,7 +34,7 @@ ALLOWED_HOSTS = []
 
 # Application definition (public/shared apps only)
 SHARED_APPS = [
-    "django_tenants",
+    "django_tenants",  # django-tenants
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -43,12 +43,19 @@ SHARED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "django_filters",
-    "tenants.apps.TenantsConfig",
-    "blog.apps.BlogConfig",
+    "tenants.apps.TenantsConfig",  # local tenants app
+    "blog.apps.BlogConfig",  # local blog app
+    "tenant_users.permissions",  # django-tenant-users
+    "tenant_users.tenants",  # django-tenant-users
 ]
 
 # Application definition (tenant apps only)
-TENANT_APPS = ["tasks.apps.TasksConfig"]
+TENANT_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "tenant_users.permissions",  # django-tenant-users
+    "tasks.apps.TasksConfig",  # local tasks app
+]
 
 # Application definition (public/shared apps and tenant apps)
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -62,6 +69,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "tenant_users.tenants.middleware.TenantAccessMiddleware",  # django-tenant-users
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -100,7 +108,7 @@ DATABASES = {
     }
 }
 
-# Multi-tenancy settings
+# Django-tenants settings
 DATABASE_ROUTERS = ["django_tenants.routers.TenantSyncRouter"]
 
 BASE_DOMAIN = "localhost"
@@ -112,6 +120,13 @@ AUTH_USER_MODEL = "tenants.User"
 TENANT_MODEL = "tenants.Tenant"
 
 TENANT_DOMAIN_MODEL = "tenants.Domain"
+
+# Django-tenant-users settings
+TENANT_USERS_DOMAIN = BASE_DOMAIN
+
+AUTHENTICATION_BACKENDS = [
+    "tenant_users.permissions.backend.UserBackend",
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

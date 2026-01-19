@@ -2,15 +2,13 @@ import json
 from typing import Any
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
-from django_tenants.utils import (
-    get_tenant_domain_model,
-    get_tenant_model,
-    schema_context,
-)
 from psycopg2 import connect, errors, sql
+from tenant_users.tenants.tasks import provision_tenant
+from tenant_users.tenants.utils import create_public_tenant
+
+from tenants.models import User
 
 
 class Command(BaseCommand):
@@ -19,7 +17,15 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         self.drop_and_recreate_db()
         self.migrate_schemas()
-        self.create_tenants()
+
+        file_path = settings.BASE_DIR / "tenants" / "data" / "tenants.json"
+        with open(file_path, "r") as f:
+            self.tenants_data = json.load(f)
+
+        self.create_public_tenant()
+        self.create_private_tenants()
+
+        self.stdout.write(self.style.SUCCESS("All tenants created successfully."))
 
     def drop_and_recreate_db(self) -> None:
         """
@@ -87,43 +93,68 @@ class Command(BaseCommand):
     def migrate_schemas(self) -> None:
         """Runs the migrate_schemas command."""
         self.stdout.write("Running migrations...")
-        call_command("migrate_schemas", interactive=False)
+        call_command("migrate_schemas", "--shared", "--noinput")
         self.stdout.write(self.style.SUCCESS("Migrations completed."))
 
-    def create_tenants(self) -> None:
-        """Reads tenants.json and creates tenants, domains, and users."""
-        self.stdout.write("Creating tenants...")
+    def create_public_tenant(self) -> None:
+        self.stdout.write("Creating the public tenant...")
+        public_tenant_data = self.tenants_data[0]
 
-        Tenant = get_tenant_model()
-        Domain = get_tenant_domain_model()
-        User = get_user_model()
+        # Create the public tenant and the root user
+        public_tenant: Any
+        public_tenant, public_tenant_domain, root_user = create_public_tenant(
+            domain_url=settings.BASE_DOMAIN,
+            tenant_extra_data={"slug": public_tenant_data["subdomain"]},
+            owner_email=public_tenant_data["owner"]["email"],
+            is_superuser=True,
+            is_staff=True,
+            **{
+                "password": public_tenant_data["owner"]["password"],
+                "is_verified": True,
+            },
+        )
+        self.public_tenant = public_tenant
+        self.root_user = root_user
 
-        file_path = settings.BASE_DIR / "tenants" / "data" / "tenants.json"
-        with open(file_path, "r") as f:
-            tenants_data = json.load(f)
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Public tenant ('{public_tenant.schema_name}') has been successfully created."
+            )
+        )
 
-        for data in tenants_data:
-            # Create Tenant
-            tenant: Any = Tenant.objects.create(
-                schema_name=data["schema_name"], name=data["name"]
+    def create_private_tenants(self) -> None:
+        private_tenant_data = self.tenants_data[1:]
+
+        for tenant_data in private_tenant_data:
+            self.stdout.write(f"Creating tenant {tenant_data['schema_name']}...")
+
+            # Create the tenant owner
+            tenant_owner = User.objects.create_user(  # type: ignore
+                email=tenant_data["owner"]["email"],
+                password=tenant_data["owner"]["password"],
+            )
+            tenant_owner.is_verified = True
+            tenant_owner.save()
+
+            # Create the tenant
+            tenant, domain = provision_tenant(
+                tenant_name=tenant_data["name"],
+                tenant_slug=tenant_data["subdomain"],
+                schema_name=tenant_data["schema_name"],
+                owner=tenant_owner,
+                is_superuser=True,
+                is_staff=True,
             )
 
-            # Create Domain
-            domain_name = (
-                f"{data['subdomain']}.{settings.BASE_DOMAIN}"
-                if data["subdomain"]
-                else settings.BASE_DOMAIN
+            # Add the root user to the tenant
+            tenant.add_user(
+                self.root_user,
+                is_superuser=True,
+                is_staff=True,
             )
-            Domain.objects.create(domain=domain_name, tenant=tenant, is_primary=True)
 
-            # Create Superuser inside the tenant's schema
-            with schema_context(tenant.schema_name):
-                User.objects.create_superuser(
-                    username=data["owner"]["username"],
-                    email=data["owner"]["email"],
-                    password=data["owner"]["password"],
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Tenant '{tenant.schema_name}' has been successfully created."
                 )
-
-            self.stdout.write(f"Created tenant: {data['name']} ({domain_name})")
-
-        self.stdout.write(self.style.SUCCESS("All tenants created successfully."))
+            )

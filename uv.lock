@@ -44,6 +44,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "django" },
     { name = "django-filter" },
+    { name = "django-tenant-users" },
     { name = "django-tenants" },
     { name = "djangorestframework" },
     { name = "markdown" },
@@ -55,11 +56,25 @@ dependencies = [
 requires-dist = [
     { name = "django", specifier = "==5.1.9" },
     { name = "django-filter", specifier = "==25.1" },
+    { name = "django-tenant-users", specifier = "==2.1.1" },
     { name = "django-tenants", specifier = "==3.7.0" },
     { name = "djangorestframework", specifier = "==3.16.0" },
     { name = "markdown", specifier = "==3.8" },
     { name = "psycopg2-binary", specifier = "==2.9.10" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
+]
+
+[[package]]
+name = "django-tenant-users"
+version = "2.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-tenants" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/be/ad/e002f3c62efbe6ca65258a34df625425626b803359bcfb36d4d77dff6a41/django_tenant_users-2.1.1.tar.gz", hash = "sha256:84607b1b64eaab8989098a50da372790467c76f9c9a584e4a0bf617db9452141", size = 14653, upload-time = "2025-04-08T22:44:51.782Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f8/a5/4bb6d1e69fa4ca6e492d72eeca45e72739d7daf36828e67a919cfa721859/django_tenant_users-2.1.1-py3-none-any.whl", hash = "sha256:63bbdbbdac9e39f018b8306c242565ac81bde0cd5390d50a65e5cb7bc2d28fb7", size = 18604, upload-time = "2025-04-08T22:44:50.462Z" },
 ]
 
 [[package]]

@@ -1,43 +1,79 @@
 # tenants/views.py
 
-from typing import Any
+# Import django libraries
+from django.contrib.auth import get_user_model
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    UpdateView,
+)
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 
-from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
-
+# Import local modules
 from tenants.models import Tenant
+from tenants.serializers import TenantSerializer
 from tenants.utils import create_tenant
 
+User = get_user_model()
 
-@login_required
-def tenant_create_view(request: HttpRequest) -> HttpResponse:
-    if request.method == "POST":
-        # In a real app, use a Django Form here
-        tenant_data: dict[str, Any] = request.POST.dict()
 
-        # 1. Create or Get the User (Owner)
-        # Note: Users are global (public schema)
-        # You might need logic here to check if user exists or create a new one
+class TenantListView(LoginRequiredMixin, ListView):
+    model = Tenant
+    template_name = "tenants/tenant_list.html"
+    context_object_name = "tenants"
 
-        # 2. Provision the Tenant
-        # This handles Schema creation + Domain creation + Permission assignment
 
-        # Inject the current user as the root user for the new tenant
-        # create_tenant expects a User instance, not a string from POST
-        tenant_data["root_user"] = request.user
+class TenantDetailView(LoginRequiredMixin, DetailView):
+    model = Tenant
+    template_name = "tenants/tenant_detail.html"
 
-        create_tenant(
-            tenant_data,
-        )
 
+class TenantCreateView(LoginRequiredMixin, CreateView):
+    model = Tenant
+    fields = ["name", "schema_name"]
+    template_name = "tenants/tenant_form.html"
+    success_url = reverse_lazy("tenant_list")
+
+    def form_valid(self, form):
+        user = self.request.user
+        assert isinstance(user, User), "User must be authenticated"
+
+        tenant_data = {
+            "name": form.cleaned_data["name"],
+            "schema_name": form.cleaned_data["schema_name"],
+            "subdomain": form.cleaned_data["schema_name"],
+            "email": user.email,
+            "password": "temp_password",
+            "root_user": user,
+        }
+        create_tenant(tenant_data)
         return redirect("tenant_list")
 
-    return render(request, "tenants/tenant_form.html")
+
+class TenantUpdateView(LoginRequiredMixin, UpdateView):
+    model = Tenant
+    fields = ["name"]
+    template_name = "tenants/tenant_form.html"
+    success_url = reverse_lazy("tenant_list")
 
 
-@login_required
-def tenant_list_view(request: HttpRequest) -> HttpResponse:
-    # List all tenants
-    tenants = Tenant.objects.all()
-    return render(request, "tenants/tenant_list.html", {"tenants": tenants})
+class TenantDeleteView(LoginRequiredMixin, DeleteView):
+    model = Tenant
+    template_name = "tenants/tenant_confirm_delete.html"
+    success_url = reverse_lazy("tenant_list")
+
+
+class TenantViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for tenant management.
+    """
+
+    queryset = Tenant.objects.all()
+    serializer_class = TenantSerializer
+    permission_classes = [IsAuthenticated]

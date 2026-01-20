@@ -17,15 +17,15 @@ Check out the [post](#).
    ```
 
 1. Populate the database:
-   
+
    ```sh
-   $ python manage.py populate_db
+   python manage.py populate_db
    ```
 
 1. Your tenants should be accessible at the following URLs:
 
    - `public`: [http://localhost:8000/api/](http://localhost:8000/api/)
-   - `demo1`: [http://demo1.localhost:8000/api/](http://demo1.localhost:8000/api/) 
+   - `demo1`: [http://demo1.localhost:8000/api/](http://demo1.localhost:8000/api/)
    - `demo2`: [http://demo2.localhost:8000/api/](http://demo2.localhost:8000/api/)
 
 1. Tenant information including admin credentials, can be found in *[tenants.json](https://github.com/duplxey/django-multi-tenant/blob/master/tenants/data/tenants.json)* file.

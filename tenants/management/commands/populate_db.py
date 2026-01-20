@@ -1,48 +1,70 @@
+# tenants/management/commands/populate_db.py
+
+# Import standard libraries
 import json
 from typing import Any
 
+# Import django libraries
 from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+
+# Import third-party libraries
 from psycopg2 import connect, errors, sql
+from psycopg2.extensions import connection, cursor
 from tenant_users.tenants.tasks import provision_tenant
 from tenant_users.tenants.utils import create_public_tenant
 
+# Import local modules
 from tenants.models import User
 
 
 class Command(BaseCommand):
+    """
+    A management command to drop, recreate, and populate the database with tenants.
+    """
+
     help = "Drops, recreates, and populates the database with tenants."
 
     def handle(self, *args: Any, **options: Any) -> None:
+        """
+        Handles the command.
+        """
+        # Drop and recreate the database
         self.drop_and_recreate_db()
         self.migrate_schemas()
 
-        file_path = settings.BASE_DIR / "tenants" / "data" / "tenants.json"
-        with open(file_path, "r") as f:
-            self.tenants_data = json.load(f)
+        # Load tenant data
+        file_path: str = settings.BASE_DIR / "tenants" / "data" / "tenants.json"
+        with open(file=file_path, mode="r") as f:
+            self.tenants_data: Any = json.load(fp=f)
 
+        # Create the public tenant and private tenants
         self.create_public_tenant()
         self.create_private_tenants()
 
-        self.stdout.write(self.style.SUCCESS("All tenants created successfully."))
+        self.stdout.write(
+            msg=self.style.SUCCESS(text="All tenants created successfully.")
+        )
 
     def drop_and_recreate_db(self) -> None:
         """
         Drops and recreates the database to ensure a clean state.
         Connects to 'postgres' database to perform these administrative actions.
         """
-        self.stdout.write("Dropping and recreating the database...")
 
-        db_settings = settings.DATABASES["default"]
-        db_name = db_settings["NAME"]
-        db_user = db_settings["USER"]
-        db_password = db_settings["PASSWORD"]
-        db_host = db_settings["HOST"]
-        db_port = db_settings["PORT"]
+        self.stdout.write(msg="Dropping and recreating the database...")
+
+        # Get database settings
+        db_settings: dict[str, Any] = settings.DATABASES["default"]
+        db_name: str = db_settings["NAME"]
+        db_user: str = db_settings["USER"]
+        db_password: str = db_settings["PASSWORD"]
+        db_host: str = db_settings["HOST"]
+        db_port: str = db_settings["PORT"]
 
         # Connect to 'postgres' system database
-        conn = connect(
+        conn: connection = connect(
             dbname="postgres",
             user=db_user,
             password=db_password,
@@ -50,30 +72,32 @@ class Command(BaseCommand):
             port=db_port,
         )
         conn.autocommit = True
-        cur = conn.cursor()
+        cur: cursor = conn.cursor()
 
         # Terminate existing connections to the target database
         try:
             cur.execute(
-                sql.SQL(
-                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()"
+                query=sql.SQL(
+                    string="SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()"
                 ),
-                [db_name],
+                vars=[db_name],
             )
         except errors.InsufficientPrivilege:
             self.stdout.write(
-                self.style.WARNING(
-                    "Insufficient privileges to terminate connections. Proceeding..."
+                msg=self.style.WARNING(
+                    text="Insufficient privileges to terminate connections. Proceeding..."
                 )
             )
 
-        # Drop and Create
+        # Drop and Create database
         try:
             cur.execute(
-                sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(db_name))
+                query=sql.SQL(string="DROP DATABASE IF EXISTS {}").format(
+                    sql.Identifier(db_name)
+                )
             )
             cur.execute(
-                sql.SQL("CREATE DATABASE {} OWNER {}").format(
+                query=sql.SQL(string="CREATE DATABASE {} OWNER {}").format(
                     sql.Identifier(db_name), sql.Identifier(db_user)
                 )
             )
@@ -87,18 +111,28 @@ class Command(BaseCommand):
         cur.close()
         conn.close()
         self.stdout.write(
-            self.style.SUCCESS(f"Database '{db_name}' recreated successfully.")
+            msg=self.style.SUCCESS(text=f"Database '{db_name}' recreated successfully.")
         )
 
     def migrate_schemas(self) -> None:
         """Runs the migrate_schemas command."""
-        self.stdout.write("Running migrations...")
+
+        self.stdout.write(msg="Running migrations...")
+
+        # Migrate shared apps
         call_command("migrate_schemas", "--shared", "--noinput")
-        self.stdout.write(self.style.SUCCESS("Migrations completed."))
+        self.stdout.write(msg=self.style.SUCCESS(text="Migrations completed."))
 
     def create_public_tenant(self) -> None:
-        self.stdout.write("Creating the public tenant...")
-        public_tenant_data = self.tenants_data[0]
+        """
+        Creates the public tenant.
+        The public tenant is the first tenant in the list.
+        """
+
+        self.stdout.write(msg="Creating the public tenant...")
+
+        # Get public tenant data
+        public_tenant_data: dict[str, Any] = self.tenants_data[0]
 
         # Create the public tenant and the root user
         public_tenant: Any
@@ -113,7 +147,7 @@ class Command(BaseCommand):
                 "is_verified": True,
             },
         )
-        self.public_tenant = public_tenant
+        self.public_tenant: Any = public_tenant
         self.root_user = root_user
 
         self.stdout.write(
@@ -123,6 +157,12 @@ class Command(BaseCommand):
         )
 
     def create_private_tenants(self) -> None:
+        """
+        Creates the private tenants.
+        The private tenants are the rest of the tenants in the list.
+        """
+
+        # Get private tenant data
         private_tenant_data = self.tenants_data[1:]
 
         for tenant_data in private_tenant_data:
@@ -154,7 +194,7 @@ class Command(BaseCommand):
             )
 
             self.stdout.write(
-                self.style.SUCCESS(
-                    f"Tenant '{tenant.schema_name}' has been successfully created."
+                msg=self.style.SUCCESS(
+                    text=f"Tenant '{tenant.schema_name}' has been successfully created."
                 )
             )

@@ -17,13 +17,13 @@ The architecture uses a **Shared User / Isolated Tenant** model.
 
 * **Location:** Lives in the `public` schema (metadata) but **owns** a specific PostgreSQL schema (e.g., `demo1`) where actual app data resides.
 * **Definition:** Inherits from `TenantBase` (`tenants/models.py`).
-* **Relation:** A Tenant has **many** Users (via a permission table managed by `django-tenant-users`) and **many** Domains.
+* **Relation:** A Tenant has **many** Users (via a permission table managed by `django-tenant-users`) and **many** Domains (one-to-many relationship).
 
 ### Domain (EntryPoint)
 
 * **Location:** Lives in the `public` schema.
 * **Definition:** Inherits from `DomainMixin` (`tenants/models.py`).
-* **Relation:** A Domain belongs to **one** Tenant. It acts as the routing key (e.g., `demo1.localhost` -> `demo1` schema).
+* **Relation:** A Domain belongs to **one** Tenant(ForeignKey). It acts as the routing key (e.g., `demo1.localhost` -> `demo1` schema). Multiple domains can point to the same tenant (e.g., `demo1.com` and `demo1.net` both route to the `demo1` schema).
 
 ## 2. Deletion Restrictions & Behavior
 

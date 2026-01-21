@@ -18,15 +18,16 @@ from django.views.generic import (
     ListView,
     UpdateView,
 )
+
+# Import third-party libraries
 from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
 
 # Import local modules
+from tenants.mixins import TenantAdminRequiredMixin
 from tenants.models import Tenant, User, UserInvitation
 from tenants.serializers import TenantSerializer
 from tenants.utils import create_tenant
-
-from .mixins import TenantAdminRequiredMixin
 
 
 class TenantListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -261,15 +262,18 @@ class AcceptInvitationView(View):
 
 
 class UserEditView(TenantAdminRequiredMixin, UpdateView):
-    """Edit user role within tenant"""
+    """Edit user within tenant"""
 
     model = User
-    fields = ["role", "is_tenant_admin"]
     template_name = "tenants/user_edit.html"
-    success_url = reverse_lazy("user_list")
+    fields = ["first_name", "last_name", "role", "is_tenant_admin"]
 
     def get_queryset(self):
-        return User.objects.filter(tenants__schema_name=connection.schema_name)
+        # Only show users in current tenant
+        return User.objects.filter(tenants=connection.tenant)
+
+    def get_success_url(self):
+        return reverse("user_list")
 
 
 class UserRemoveView(TenantAdminRequiredMixin, DeleteView):

@@ -17,20 +17,21 @@ from core.models import TimeStampedModel
 
 class User(UserProfile):
     """
-    Extended user model with additional fields.
+    A user model.
     """
 
-    ROLE_CHOICES: list[tuple[str, str]] = [
+    # Add these fields if they're missing
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    is_tenant_admin = models.BooleanField(default=False)
+
+    ROLE_CHOICES = [
         ("admin", "Admin"),
         ("staff", "Staff"),
         ("user", "Regular User"),
     ]
-
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)
-    phone = models.CharField(max_length=20, blank=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
-    is_tenant_admin = models.BooleanField(default=False)
 
     def __str__(self):
         role_display = dict(self.ROLE_CHOICES).get(self.role, self.role)

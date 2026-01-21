@@ -1,8 +1,11 @@
 # tenants/mixins.py
 
+# Import standard libraries
 from typing import TYPE_CHECKING
 
-from django.contrib.auth.mixins import UserPassesTestMixin
+# Import django libraries
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import PermissionDenied
 from django.db import connection
 
 if TYPE_CHECKING:
@@ -11,15 +14,22 @@ if TYPE_CHECKING:
     from .models import User
 
 
-class TenantAdminRequiredMixin(UserPassesTestMixin):
-    """Require user to be tenant admin"""
+class TenantAdminRequiredMixin(LoginRequiredMixin):
+    """Mixin that requires user to be a tenant admin"""
 
-    if TYPE_CHECKING:
-        request: HttpRequest
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
 
-    def test_func(self) -> bool:
-        user: "User" = self.request.user  # type: ignore[assignment]
-        return user.is_authenticated and (user.is_tenant_admin or user.role == "admin")
+        # Check if user is tenant admin or superuser
+        user = request.user
+        is_tenant_admin = getattr(user, "is_tenant_admin", False)
+        if not (is_tenant_admin or user.is_superuser):
+            raise PermissionDenied(
+                "You must be a tenant administrator to access this page."
+            )
+
+        return super().dispatch(request, *args, **kwargs)
 
 
 class TenantStaffRequiredMixin(UserPassesTestMixin):

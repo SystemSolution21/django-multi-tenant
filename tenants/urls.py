@@ -15,10 +15,10 @@ from tenants.views import (
     TenantListView,
     TenantUpdateView,
     TenantUserListView,
+    UserEditView,
     UserInviteView,
+    UserRemoveView,
 )
-
-# from . import views
 
 urlpatterns: list[Any] = [
     path(route="", view=TenantListView.as_view(), name="tenant_list"),
@@ -32,6 +32,12 @@ urlpatterns: list[Any] = [
     ),
     path(route="users/", view=TenantUserListView.as_view(), name="user_list"),
     path(route="users/invite/", view=UserInviteView.as_view(), name="user_invite"),
+    path(route="users/<int:pk>/edit/", view=UserEditView.as_view(), name="user_edit"),
+    path(
+        route="users/<int:pk>/remove/",
+        view=UserRemoveView.as_view(),
+        name="user_delete",
+    ),
     path(
         route="invitations/<uuid:token>/accept/",
         view=AcceptInvitationView.as_view(),

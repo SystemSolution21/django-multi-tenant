@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User - {{ object.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Edit User: {{ object.full_name }}</h4>
+                    <small class="text-muted">{{ object.email }}</small>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.role.id_for_label }}" class="form-label">Role</label>
+                            {{ form.role }}
+                            {% if form.role.errors %}
+                                <div class="text-danger">{{ form.role.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_tenant_admin }}
+                                <label class="form-check-label" for="{{ form.is_tenant_admin.id_for_label }}">
+                                    Tenant Administrator
+                                </label>
+                                {% if form.is_tenant_admin.errors %}
+                                    <div class="text-danger">{{ form.is_tenant_admin.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <small>Tenant administrators can manage users and tenant settings.</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form fields
+    document.getElementById('{{ form.role.id_for_label }}').className = 'form-select';
+    document.getElementById('{{ form.is_tenant_admin.id_for_label }}').className = 'form-check-input';
+});
+</script>
+{% endblock %}

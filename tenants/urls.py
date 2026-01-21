@@ -6,17 +6,19 @@ from typing import Any
 # Import django libraries
 from django.urls import path
 
+# Import local modules
 from tenants.views import (
+    AcceptInvitationView,
     TenantCreateView,
     TenantDeleteView,
     TenantDetailView,
     TenantListView,
     TenantUpdateView,
     TenantUserListView,
+    UserInviteView,
 )
 
-# Import local modules
-from . import views
+# from . import views
 
 urlpatterns: list[Any] = [
     path(route="", view=TenantListView.as_view(), name="tenant_list"),
@@ -29,12 +31,10 @@ urlpatterns: list[Any] = [
         route="<int:pk>/delete/", view=TenantDeleteView.as_view(), name="tenant_delete"
     ),
     path(route="users/", view=TenantUserListView.as_view(), name="user_list"),
-    path(
-        route="users/invite/", view=views.UserInviteView.as_view(), name="user_invite"
-    ),
+    path(route="users/invite/", view=UserInviteView.as_view(), name="user_invite"),
     path(
         route="invitations/<uuid:token>/accept/",
-        view=views.AcceptInvitationView.as_view(),
+        view=AcceptInvitationView.as_view(),
         name="accept_invitation",
     ),
 ]

@@ -140,6 +140,14 @@ class TenantUserListView(TenantAdminRequiredMixin, ListView):
     def get_queryset(self):
         return User.objects.filter(tenants__schema_name=connection.schema_name)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        current_tenant = Tenant.objects.get(schema_name=connection.schema_name)
+        context["pending_invitations"] = UserInvitation.objects.filter(
+            tenant=current_tenant, is_accepted=False
+        ).order_by("-created_at")
+        return context
+
 
 class UserInviteView(TenantAdminRequiredMixin, CreateView):
     """Invite new user to tenant"""

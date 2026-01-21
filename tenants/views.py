@@ -1,16 +1,15 @@
 # tenants/views.py
 
 # Import standard libraries
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 # Import django libraries
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.mail import send_mail
 from django.db import connection
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django.utils import timezone
 from django.views import View
 from django.views.generic import (
     CreateView,
@@ -26,6 +25,8 @@ from rest_framework.permissions import IsAuthenticated
 from tenants.models import Tenant, User, UserInvitation
 from tenants.serializers import TenantSerializer
 from tenants.utils import create_tenant
+
+from .mixins import TenantAdminRequiredMixin
 
 
 class TenantListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -129,89 +130,158 @@ class TenantViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsPublicSuperUser]
 
 
-class TenantUserListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+class TenantUserListView(TenantAdminRequiredMixin, ListView):
     """List users within current tenant"""
 
     model = User
     template_name = "tenants/user_list.html"
     context_object_name = "users"
 
-    def test_func(self):
-        user = cast(User, self.request.user)
-        return user.is_tenant_admin or user.role == "admin"
-
     def get_queryset(self):
-        # Only show users from current tenant
         return User.objects.filter(tenants__schema_name=connection.schema_name)
 
 
-class UserInviteView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class UserInviteView(TenantAdminRequiredMixin, CreateView):
     """Invite new user to tenant"""
+
+    if TYPE_CHECKING:
+        object: UserInvitation
 
     model = UserInvitation
     fields = ["email", "role"]
     template_name = "tenants/user_invite.html"
     success_url = reverse_lazy("user_list")
 
-    def test_func(self):
-        user = cast(User, self.request.user)
-        return user.is_tenant_admin or user.role == "admin"
-
     def form_valid(self, form):
         user = cast(User, self.request.user)
-        form.instance.tenant = user.tenants.get(schema_name=connection.schema_name)
-        form.instance.invited_by = self.request.user
+        current_tenant = Tenant.objects.get(schema_name=connection.schema_name)
 
-        # Send invitation email
+        form.instance.tenant = current_tenant
+        form.instance.invited_by = user
+
+        # Check if user already exists and is in tenant
+        try:
+            existing_user = User.objects.get(email=form.instance.email)
+            if existing_user.tenants.filter(
+                schema_name=connection.schema_name
+            ).exists():
+                messages.error(self.request, "User is already a member of this tenant.")
+                return self.form_invalid(form)
+        except User.DoesNotExist:
+            pass
+
+        response = super().form_valid(form)
+
+        # Send invitation email (self.object is now available)
         invitation_url = self.request.build_absolute_uri(
-            reverse("accept_invitation", kwargs={"token": form.instance.token})
+            reverse("accept_invitation", kwargs={"token": self.object.token})
         )
 
         send_mail(
-            subject=f"Invitation to join {form.instance.tenant.name}",
-            message=f"You have been invited to join {form.instance.tenant.name}. Click here to accept: {invitation_url}",
+            subject=f"Invitation to join {current_tenant.name}",
+            message=f"You have been invited to join {current_tenant.name}. Click here to accept: {invitation_url}",
             from_email="noreply@yourapp.com",
-            recipient_list=[form.instance.email],
+            recipient_list=[self.object.email],
             fail_silently=False,
         )
 
-        messages.success(self.request, f"Invitation sent to {form.instance.email}")
-        return super().form_valid(form)
+        messages.success(self.request, f"Invitation sent to {self.object.email}")
+        return response
 
 
 class AcceptInvitationView(View):
     """Accept user invitation to join tenant"""
 
     def get(self, request, token):
-        try:
-            invitation = UserInvitation.objects.get(
-                token=token, is_accepted=False, expires_at__gt=timezone.now()
-            )
-        except UserInvitation.DoesNotExist:
-            messages.error(request, "Invalid or expired invitation.")
+        invitation = get_object_or_404(UserInvitation, token=token, is_accepted=False)
+
+        if invitation.is_expired:
+            messages.error(request, "This invitation has expired.")
             return redirect("index")
 
-        # If user is already logged in and matches invitation email
-        if request.user.is_authenticated and request.user.email == invitation.email:
-            # Add user to tenant
-            invitation.tenant.add_user(request.user)
-            invitation.is_accepted = True
-            invitation.save()
-
-            messages.success(request, f"Welcome to {invitation.tenant.name}!")
-            return redirect(f"http://{invitation.tenant.get_primary_domain()}/")
-
-        # Redirect to registration/login with invitation context
         return render(
             request,
             "tenants/accept_invitation.html",
             {
                 "invitation": invitation,
-                "tenant": invitation.tenant,
             },
         )
 
     def post(self, request, token):
-        # Handle user registration/login for invitation
-        # This would integrate with your auth system
-        pass
+        invitation: UserInvitation = get_object_or_404(
+            UserInvitation, token=token, is_accepted=False
+        )
+
+        if invitation.is_expired:
+            messages.error(request, "This invitation has expired.")
+            return redirect("index")
+
+        if not request.user.is_authenticated:
+            messages.error(request, "Please log in to accept the invitation.")
+            return redirect("login")
+
+        if request.user.email != invitation.email:
+            messages.error(request, "This invitation is for a different email address.")
+            return redirect("index")
+
+        # Add user to tenant
+        invitation.tenant.add_user(
+            request.user,
+            is_superuser=(invitation.role == "admin"),
+            is_staff=(invitation.role in ["admin", "staff"]),
+        )
+
+        # Update user role
+        user = cast(User, request.user)
+        user.role = invitation.role
+        if invitation.role == "admin":
+            user.is_tenant_admin = True
+        user.save()
+
+        # Mark invitation as accepted
+        invitation.is_accepted = True
+        invitation.save()
+
+        messages.success(request, f"Welcome to {invitation.tenant.name}!")
+
+        # Redirect to tenant domain
+        tenant_domain = invitation.tenant.get_primary_domain()
+        if tenant_domain:
+            return redirect(f"http://{tenant_domain.domain}/")
+
+        return redirect("index")
+
+
+class UserEditView(TenantAdminRequiredMixin, UpdateView):
+    """Edit user role within tenant"""
+
+    model = User
+    fields = ["role", "is_tenant_admin"]
+    template_name = "tenants/user_edit.html"
+    success_url = reverse_lazy("user_list")
+
+    def get_queryset(self):
+        return User.objects.filter(tenants__schema_name=connection.schema_name)
+
+
+class UserRemoveView(TenantAdminRequiredMixin, DeleteView):
+    """Remove user from tenant"""
+
+    model = User
+    template_name = "tenants/user_confirm_remove.html"
+    success_url: str = reverse_lazy("user_list")
+
+    def get_queryset(self):
+        return User.objects.filter(tenants__schema_name=connection.schema_name)
+
+    def delete(self, request, *args, **kwargs):
+        user = cast(User, self.get_object())
+        current_tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
+
+        # Remove user from tenant (don't delete the user)
+        current_tenant.remove_user(user_obj=user)
+
+        messages.success(
+            request=request, message=f"User {user.email} removed from tenant."
+        )
+        return redirect(to=self.success_url)

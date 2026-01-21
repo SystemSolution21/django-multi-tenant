@@ -58,26 +58,38 @@ class Domain(DomainMixin, TimeStampedModel):
 
 
 class UserInvitation(TimeStampedModel):
-    """
-    Model to handle user invitations to tenants.
-    """
+    """Model for user invitations to tenants"""
 
+    ROLE_CHOICES = [
+        ("admin", "Admin"),
+        ("staff", "Staff"),
+        ("user", "Regular User"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        Tenant, on_delete=models.CASCADE, related_name="invitations"
+    )
     email = models.EmailField()
-    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
-    invited_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=10, choices=User.ROLE_CHOICES, default="user")
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
+    invited_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="sent_invitations"
+    )
     token = models.UUIDField(default=uuid.uuid4, unique=True)
     is_accepted = models.BooleanField(default=False)
     expires_at = models.DateTimeField()
+
+    class Meta:
+        unique_together = ["tenant", "email"]
 
     def save(self, *args, **kwargs):
         if not self.expires_at:
             self.expires_at = timezone.now() + timedelta(days=7)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"Invitation for {self.email} to {self.tenant.name}"
+
     @property
     def is_expired(self):
         return timezone.now() > self.expires_at
-
-    def __str__(self):
-        return f"Invitation for {self.email} to {self.tenant.name}"

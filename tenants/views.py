@@ -1,11 +1,15 @@
 # tenants/views.py
 
+# Import standard libraries
+from typing import cast
+
 # Import django libraries
-from django.contrib.auth import get_user_model
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.mail import send_mail
 from django.db import connection
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -17,11 +21,9 @@ from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
 
 # Import local modules
-from tenants.models import Tenant
+from tenants.models import Tenant, User, UserInvitation
 from tenants.serializers import TenantSerializer
 from tenants.utils import create_tenant
-
-User = get_user_model()
 
 
 class TenantListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -123,3 +125,53 @@ class TenantViewSet(viewsets.ModelViewSet):
     queryset = Tenant.objects.all()
     serializer_class = TenantSerializer
     permission_classes = [IsAuthenticated, IsPublicSuperUser]
+
+
+class TenantUserListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """List users within current tenant"""
+
+    model = User
+    template_name = "tenants/user_list.html"
+    context_object_name = "users"
+
+    def test_func(self):
+        user = cast(User, self.request.user)
+        return user.is_tenant_admin or user.role == "admin"
+
+    def get_queryset(self):
+        # Only show users from current tenant
+        return User.objects.filter(tenants__schema_name=connection.schema_name)
+
+
+class UserInviteView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    """Invite new user to tenant"""
+
+    model = UserInvitation
+    fields = ["email", "role"]
+    template_name = "tenants/user_invite.html"
+    success_url = reverse_lazy("user_list")
+
+    def test_func(self):
+        user = cast(User, self.request.user)
+        return user.is_tenant_admin or user.role == "admin"
+
+    def form_valid(self, form):
+        user = cast(User, self.request.user)
+        form.instance.tenant = user.tenants.get(schema_name=connection.schema_name)
+        form.instance.invited_by = self.request.user
+
+        # Send invitation email
+        invitation_url = self.request.build_absolute_uri(
+            reverse("accept_invitation", kwargs={"token": form.instance.token})
+        )
+
+        send_mail(
+            subject=f"Invitation to join {form.instance.tenant.name}",
+            message=f"You have been invited to join {form.instance.tenant.name}. Click here to accept: {invitation_url}",
+            from_email="noreply@yourapp.com",
+            recipient_list=[form.instance.email],
+            fail_silently=False,
+        )
+
+        messages.success(self.request, f"Invitation sent to {form.instance.email}")
+        return super().form_valid(form)

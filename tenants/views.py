@@ -8,8 +8,10 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.mail import send_mail
 from django.db import connection
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+from django.views import View
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -175,3 +177,41 @@ class UserInviteView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 
         messages.success(self.request, f"Invitation sent to {form.instance.email}")
         return super().form_valid(form)
+
+
+class AcceptInvitationView(View):
+    """Accept user invitation to join tenant"""
+
+    def get(self, request, token):
+        try:
+            invitation = UserInvitation.objects.get(
+                token=token, is_accepted=False, expires_at__gt=timezone.now()
+            )
+        except UserInvitation.DoesNotExist:
+            messages.error(request, "Invalid or expired invitation.")
+            return redirect("index")
+
+        # If user is already logged in and matches invitation email
+        if request.user.is_authenticated and request.user.email == invitation.email:
+            # Add user to tenant
+            invitation.tenant.add_user(request.user)
+            invitation.is_accepted = True
+            invitation.save()
+
+            messages.success(request, f"Welcome to {invitation.tenant.name}!")
+            return redirect(f"http://{invitation.tenant.get_primary_domain()}/")
+
+        # Redirect to registration/login with invitation context
+        return render(
+            request,
+            "tenants/accept_invitation.html",
+            {
+                "invitation": invitation,
+                "tenant": invitation.tenant,
+            },
+        )
+
+    def post(self, request, token):
+        # Handle user registration/login for invitation
+        # This would integrate with your auth system
+        pass

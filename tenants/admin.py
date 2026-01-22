@@ -23,7 +23,7 @@ class DomainAdmin(admin.ModelAdmin):
 class UserAdmin(admin.ModelAdmin):
     """Admin class for the User model."""
 
-    list_display = ["id", "email", "is_active"]
+    list_display = ["id", "email", "role", "is_tenant_admin", "is_active"]
     list_display_links = ["id", "email"]
     search_fields = ["email"]
     fieldsets = [
@@ -37,13 +37,31 @@ class UserAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Administrative",
+            "Personal Info",
             {
                 "fields": [
-                    "tenants",
-                    "last_login",
+                    "first_name",
+                    "last_name",
+                    "phone",
+                ],
+            },
+        ),
+        (
+            "Permissions",
+            {
+                "fields": [
+                    "role",
+                    "is_tenant_admin",
                     "is_active",
                     "is_verified",
+                ],
+            },
+        ),
+        (
+            "Important dates",
+            {
+                "fields": [
+                    "last_login",
                 ],
             },
         ),

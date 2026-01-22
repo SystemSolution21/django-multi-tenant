@@ -33,6 +33,14 @@ class User(UserProfile):
     ]
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
 
+    @property
+    def is_staff(self) -> bool:
+        """Determine staff status based on role"""
+        return self.role in ["admin", "staff"]
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
     def __str__(self):
         role_display = dict(self.ROLE_CHOICES).get(self.role, self.role)
         return f"{self.email} ({role_display})"

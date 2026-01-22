@@ -8,6 +8,8 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.mail import send_mail
 from django.db import connection
+from django.db.models.manager import BaseManager
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views import View
@@ -31,26 +33,34 @@ from tenants.utils import create_tenant
 
 
 class TenantListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """
+    List all tenants.
+    """
+
     model = Tenant
     template_name = "tenants/tenant_list.html"
     context_object_name = "tenants"
 
-    def test_func(self):
+    def test_func(self) -> bool:
         # Only allow access from public schema
         return connection.schema_name == "public" and self.request.user.is_superuser
 
 
 class TenantDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    """
+    Detail view for a tenant.
+    """
+
     model = Tenant
     template_name = "tenants/tenant_detail.html"
 
-    def test_func(self):
+    def test_func(self) -> bool:
         return self.request.user.is_superuser
 
 
 class TenantCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Tenant
-    fields = ["name", "schema_name"]
+    fields: list[str] = ["name", "schema_name"]
     template_name = "tenants/tenant_form.html"
     success_url = reverse_lazy("tenant_list")
 
@@ -266,34 +276,43 @@ class UserEditView(TenantAdminRequiredMixin, UpdateView):
 
     model = User
     template_name = "tenants/user_edit.html"
-    fields = ["first_name", "last_name", "role", "is_tenant_admin"]
+    fields: list[str] = ["first_name", "last_name", "role", "is_tenant_admin"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> BaseManager[User]:
         # Only show users in current tenant
         return User.objects.filter(tenants=connection.tenant)
 
-    def get_success_url(self):
-        return reverse("user_list")
+    def get_success_url(self) -> str:
+        return reverse(viewname="user_list")
 
 
-class UserRemoveView(TenantAdminRequiredMixin, DeleteView):
-    """Remove user from tenant"""
+class UserRemoveView(LoginRequiredMixin, View):
+    """
+    Remove user from current tenant instead of deleting the user.
+    """
 
-    model = User
     template_name = "tenants/user_confirm_remove.html"
-    success_url: str = reverse_lazy("user_list")
+    success_url = reverse_lazy("user_list")
 
-    def get_queryset(self):
-        return User.objects.filter(tenants__schema_name=connection.schema_name)
+    def get_object(self):
+        """Get the user object from URL kwargs"""
+        return get_object_or_404(User, pk=self.kwargs["pk"])
 
-    def delete(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
+        """Show confirmation page"""
+        user = self.get_object()
+        return render(request, self.template_name, {"object": user})
+
+    def post(self, request, *args, **kwargs):
+        """Remove user from current tenant instead of deleting the user."""
         user = cast(User, self.get_object())
-        current_tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
+        tenant = Tenant.objects.get(schema_name=connection.schema_name)
 
-        # Remove user from tenant (don't delete the user)
-        current_tenant.remove_user(user_obj=user)
+        # Remove user from tenant (keeps user account intact)
+        tenant.remove_user(user_obj=user)
 
         messages.success(
-            request=request, message=f"User {user.email} removed from tenant."
+            request, f"User {user.email} has been removed from {tenant.name}"
         )
-        return redirect(to=self.success_url)
+
+        return HttpResponseRedirect(self.success_url)

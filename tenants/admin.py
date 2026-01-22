@@ -2,30 +2,19 @@
 
 # Import django libraries
 from django.contrib import admin
-from django_tenants.admin import TenantAdminMixin
 
 # Import local modules
 from tenants.models import Domain, Tenant, User
 
 
-class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
-    """Admin class for the Tenant model."""
-
-    list_display = ["schema_name", "name", "created_at", "updated_at"]
-
-
-class DomainAdmin(admin.ModelAdmin):
-    """Admin class for the Domain model."""
-
-    list_display = ["domain", "tenant", "is_primary", "created_at", "updated_at"]
-
-
+@admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     """Admin class for the User model."""
 
     list_display = ["id", "email", "role", "is_tenant_admin", "is_active"]
     list_display_links = ["id", "email"]
-    search_fields = ["email"]
+    search_fields = ["email", "first_name", "last_name"]
+    list_filter = ["role", "is_tenant_admin", "is_active"]
     fieldsets = [
         (
             None,
@@ -68,6 +57,19 @@ class UserAdmin(admin.ModelAdmin):
     ]
 
 
-admin.site.register(model_or_iterable=Tenant, admin_class=TenantAdmin)
-admin.site.register(model_or_iterable=Domain, admin_class=DomainAdmin)
-admin.site.register(model_or_iterable=User, admin_class=UserAdmin)
+@admin.register(Tenant)
+class TenantAdmin(admin.ModelAdmin):
+    """Admin class for the Tenant model."""
+
+    list_display = ["id", "name", "schema_name", "created_at"]
+    list_display_links = ["id", "name"]
+    search_fields = ["name", "schema_name"]
+
+
+@admin.register(Domain)
+class DomainAdmin(admin.ModelAdmin):
+    """Admin class for the Domain model."""
+
+    list_display = ["id", "domain", "tenant", "is_primary"]
+    list_display_links = ["id", "domain"]
+    search_fields = ["domain"]

@@ -1,32 +1,38 @@
-{% extends "base.html" %}
-
-{% block title %}Accept Invitation{% endblock %}
-
+{% extends "base.html" %} 
+{% block title %}Accept Invitation{% endblock %} 
 {% block content %}
-<div class="container">
+  <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h4>Join {{ invitation.tenant.name }}</h4>
-                </div>
-                <div class="card-body">
-                    <p>You've been invited to join <strong>{{ invitation.tenant.name }}</strong> as a {{ invitation.get_role_display }}.</p>
-                    
-                    {% if user.is_authenticated %}
-                        <p>Click below to accept the invitation:</p>
-                        <form method="post">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-primary">Accept Invitation</button>
-                        </form>
-                    {% else %}
-                        <p>Please log in or create an account to accept this invitation.</p>
-                        <a href="{% url 'login' %}?next={{ request.get_full_path }}" class="btn btn-primary">Login</a>
-                        <a href="{% url 'register' %}?next={{ request.get_full_path }}" class="btn btn-outline-primary">Register</a>
-                    {% endif %}
-                </div>
-            </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h4>Join {{ invitation.tenant.name }}</h4>
+          </div>
+          <div class="card-body">
+            <p>
+              You've been invited to join
+              <strong>{{ invitation.tenant.name }}</strong> as a
+              <strong>{{ invitation.get_role_display }}</strong>.
+            </p>
+            {% if user.is_authenticated %}
+              <p>Click below to accept the invitation:</p>
+              <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                  Accept Invitation
+                </button>
+              </form>
+            {% else %}
+              <p>Please log in to accept this invitation.</p>
+              <a
+                href="/admin/login/?next={{ request.get_full_path }}"
+                class="btn btn-primary"
+                >Login</a
+              >
+            {% endif %}
+          </div>
         </div>
+      </div>
     </div>
-</div>
+  </div>
 {% endblock %}

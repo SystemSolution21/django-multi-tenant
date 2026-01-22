@@ -18,8 +18,6 @@ from tenant_users.tenants.utils import create_public_tenant
 # Import local modules
 from tenants.models import User
 
-TENANTS_JSON_PATH: str = settings.BASE_DIR / "tenants" / "data" / "tenants.json"
-
 
 class Command(BaseCommand):
     """
@@ -29,13 +27,24 @@ class Command(BaseCommand):
     help = "Drops, recreates, and populates the database with tenants."
 
     def handle(self, *args: Any, **options: Any) -> None:
-        """Handles the command execution."""
+        """
+        Handles the command.
+        """
+        # Drop and recreate the database
         self.drop_and_recreate_db()
         self.migrate_schemas()
-        self.create_tenants()
+
+        # Load tenant data
+        file_path: str = settings.BASE_DIR / "tenants" / "data" / "tenants.json"
+        with open(file=file_path, mode="r") as f:
+            self.tenants_data: Any = json.load(fp=f)
+
+        # Create the public tenant and private tenants
+        self.create_public_tenant()
+        self.create_private_tenants()
 
         self.stdout.write(
-            msg=self.style.SUCCESS(text="Database populated successfully.")
+            msg=self.style.SUCCESS(text="All tenants created successfully.")
         )
 
     def drop_and_recreate_db(self) -> None:
@@ -114,50 +123,60 @@ class Command(BaseCommand):
         call_command("migrate_schemas", "--shared", "--noinput")
         self.stdout.write(msg=self.style.SUCCESS(text="Migrations completed."))
 
-    def create_tenants(self) -> None:
-        """Creates tenants from the JSON file."""
-        self.stdout.write(msg="Creating tenants...")
+    def create_public_tenant(self) -> None:
+        """
+        Creates the public tenant.
+        The public tenant is the first tenant in the list.
+        """
 
-        # Load tenant data from JSON file
-        with open(file=TENANTS_JSON_PATH, mode="r", encoding="utf-8") as file:
-            tenants_data: list[dict[str, Any]] = json.load(fp=file)
-
-        # Create the public tenant (special case - creates tenant AND user)
         self.stdout.write(msg="Creating the public tenant...")
-        public_tenant_data: dict[str, Any] = tenants_data[0]
 
-        # create_public_tenant handles the chicken-and-egg problem
-        public_tenant, public_domain, public_owner_base = create_public_tenant(
+        # Get public tenant data
+        public_tenant_data: dict[str, Any] = self.tenants_data[0]
+
+        # Create the public tenant and the root user
+        public_tenant: Any
+        public_tenant, public_tenant_domain, root_user = create_public_tenant(
             domain_url=settings.BASE_DOMAIN,
             tenant_extra_data={"slug": public_tenant_data["subdomain"]},
             owner_email=public_tenant_data["owner"]["email"],
             is_superuser=True,
             is_staff=True,
-            password=public_tenant_data["owner"]["password"],
-            is_verified=True,
+            **{
+                "password": public_tenant_data["owner"]["password"],
+                "is_verified": True,
+            },
+        )
+        self.public_tenant: Any = public_tenant
+        self.root_user = root_user
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Public tenant ('{public_tenant.schema_name}') has been successfully created."
+            )
         )
 
-        # Update public owner with custom fields (cast to our User model)
-        public_owner = User.objects.get(email=public_tenant_data["owner"]["email"])
-        public_owner.role = "admin"
-        public_owner.is_tenant_admin = True
-        public_owner.save()
+    def create_private_tenants(self) -> None:
+        """
+        Creates the private tenants.
+        The private tenants are the rest of the tenants in the list.
+        """
 
-        # Create other tenants
-        for tenant_data in tenants_data[1:]:
-            self.stdout.write(msg=f"Creating tenant {tenant_data['name']}...")
+        # Get private tenant data
+        private_tenant_data = self.tenants_data[1:]
 
-            # Create the tenant owner user first (now public tenant exists)
-            tenant_owner = User.objects.create_user(  # type: ignore[attr-defined]
+        for tenant_data in private_tenant_data:
+            self.stdout.write(f"Creating tenant {tenant_data['schema_name']}...")
+
+            # Create the tenant owner
+            tenant_owner = User.objects.create_user(  # type: ignore
                 email=tenant_data["owner"]["email"],
                 password=tenant_data["owner"]["password"],
             )
             tenant_owner.is_verified = True
-            tenant_owner.role = "admin"
-            tenant_owner.is_tenant_admin = True
             tenant_owner.save()
 
-            # Create the tenant with the owner
+            # Create the tenant
             tenant, domain = provision_tenant(
                 tenant_name=tenant_data["name"],
                 tenant_slug=tenant_data["subdomain"],
@@ -167,6 +186,15 @@ class Command(BaseCommand):
                 is_staff=True,
             )
 
-        self.stdout.write(
-            msg=self.style.SUCCESS(text="All tenants created successfully.")
-        )
+            # Add the root user to the tenant
+            tenant.add_user(
+                self.root_user,
+                is_superuser=True,
+                is_staff=True,
+            )
+
+            self.stdout.write(
+                msg=self.style.SUCCESS(
+                    text=f"Tenant '{tenant.schema_name}' has been successfully created."
+                )
+            )

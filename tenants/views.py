@@ -22,6 +22,7 @@ from django.views.generic import (
 )
 
 # Import third-party libraries
+from django_tenants.utils import schema_context
 from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
 
@@ -154,9 +155,11 @@ class TenantUserListView(TenantAdminRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         current_tenant = Tenant.objects.get(schema_name=connection.schema_name)
-        context["pending_invitations"] = UserInvitation.objects.filter(
-            tenant=current_tenant, is_accepted=False
-        ).order_by("-created_at")
+        # Query invitations from public schema (SHARED_APPS)
+        with schema_context("public"):
+            context["pending_invitations"] = UserInvitation.objects.filter(
+                tenant=current_tenant, is_accepted=False
+            ).order_by("-created_at")
         return context
 
 
@@ -192,9 +195,29 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         response = super().form_valid(form)
 
         # Send invitation email (self.object is now available)
-        invitation_url = self.request.build_absolute_uri(
-            reverse("accept_invitation", kwargs={"token": self.object.token})
-        )
+        # Use public domain for invitation URL so user can login there
+        from tenants.models import Domain
+
+        with schema_context("public"):
+            public_tenant = Tenant.objects.get(schema_name="public")
+            public_domain = Domain.objects.filter(
+                tenant=public_tenant, is_primary=True
+            ).first()
+
+        if public_domain:
+            # Get the port from the current request
+            port = self.request.get_port()
+            domain_with_port = (
+                f"{public_domain.domain}:{port}"
+                if port not in ["80", "443"]
+                else public_domain.domain
+            )
+            invitation_url = f"http://{domain_with_port}/tenants/invitations/{self.object.token}/accept/"
+        else:
+            # Fallback to current domain if public domain not found
+            invitation_url = self.request.build_absolute_uri(
+                reverse("accept_invitation", kwargs={"token": self.object.token})
+            )
 
         send_mail(
             subject=f"Invitation to join {current_tenant.name}",
@@ -212,7 +235,11 @@ class AcceptInvitationView(View):
     """Accept user invitation to join tenant"""
 
     def get(self, request, token):
-        invitation = get_object_or_404(UserInvitation, token=token, is_accepted=False)
+        # Query invitation from public schema (SHARED_APPS)
+        with schema_context("public"):
+            invitation = get_object_or_404(
+                UserInvitation, token=token, is_accepted=False
+            )
 
         if invitation.is_expired:
             messages.error(request, "This invitation has expired.")
@@ -227,9 +254,11 @@ class AcceptInvitationView(View):
         )
 
     def post(self, request, token):
-        invitation: UserInvitation = get_object_or_404(
-            UserInvitation, token=token, is_accepted=False
-        )
+        # Query invitation from public schema (SHARED_APPS)
+        with schema_context("public"):
+            invitation: UserInvitation = get_object_or_404(
+                UserInvitation, token=token, is_accepted=False
+            )
 
         if invitation.is_expired:
             messages.error(request, "This invitation has expired.")
@@ -237,7 +266,7 @@ class AcceptInvitationView(View):
 
         if not request.user.is_authenticated:
             messages.error(request, "Please log in to accept the invitation.")
-            return redirect("login")
+            return redirect("/admin/login/")
 
         if request.user.email != invitation.email:
             messages.error(request, "This invitation is for a different email address.")
@@ -250,23 +279,32 @@ class AcceptInvitationView(View):
             is_staff=(invitation.role in ["admin", "staff"]),
         )
 
-        # Update user role
-        user = cast(User, request.user)
-        user.role = invitation.role
-        if invitation.role == "admin":
-            user.is_tenant_admin = True
-        user.save()
+        # Update user role (users are in public schema)
+        with schema_context("public"):
+            user = User.objects.get(pk=request.user.pk)
+            user.role = invitation.role
+            if invitation.role == "admin":
+                user.is_tenant_admin = True
+            user.save()
 
-        # Mark invitation as accepted
-        invitation.is_accepted = True
-        invitation.save()
+            # Mark invitation as accepted (invitations are in public schema)
+            invitation.is_accepted = True
+            invitation.save()
 
         messages.success(request, f"Welcome to {invitation.tenant.name}!")
 
-        # Redirect to tenant domain
-        tenant_domain = invitation.tenant.get_primary_domain()
-        if tenant_domain:
-            return redirect(f"http://{tenant_domain.domain}/")
+        # Redirect to tenant domain (query from public schema)
+        try:
+            from tenants.models import Domain
+
+            with schema_context("public"):
+                tenant_domain = Domain.objects.filter(
+                    tenant=invitation.tenant, is_primary=True
+                ).first()
+            if tenant_domain:
+                return redirect(f"http://{tenant_domain.domain}/tenants/users/")
+        except Exception:
+            pass
 
         return redirect("index")
 

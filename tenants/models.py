@@ -1,49 +1,35 @@
 # tenants/models.py
 
-# Import django libraries
 import uuid
 from datetime import timedelta
 
 from django.db import models
 from django.utils import timezone
-
-# Import third-party libraries
 from django_tenants.models import DomainMixin
 from tenant_users.tenants.models import TenantBase, UserProfile
 
-# Import local modules
 from core.models import TimeStampedModel
 
 
 class User(UserProfile):
     """
-    A user model.
+    Extended user model with additional fields.
     """
 
-    # Add these fields if they're missing
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)
-    phone = models.CharField(max_length=20, blank=True)
-    is_tenant_admin = models.BooleanField(default=False)
-
-    ROLE_CHOICES = [
+    ROLE_CHOICES: list[tuple[str, str]] = [
         ("admin", "Admin"),
         ("staff", "Staff"),
         ("user", "Regular User"),
     ]
+
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
-
-    @property
-    def is_staff(self) -> bool:
-        """Determine staff status based on role"""
-        return self.role in ["admin", "staff"]
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
+    is_tenant_admin = models.BooleanField(default=False)
 
     def __str__(self):
-        role_display = dict(self.ROLE_CHOICES).get(self.role, self.role)
-        return f"{self.email} ({role_display})"
+        return f"{self.email} ({self.get_role_display()})"  # type: ignore[attr-defined]
 
     @property
     def full_name(self) -> str:
@@ -51,18 +37,10 @@ class User(UserProfile):
 
 
 class Tenant(TenantBase, TimeStampedModel):
-    """
-    A tenant model.
-    """
-
     name = models.CharField(max_length=100)
 
 
 class Domain(DomainMixin, TimeStampedModel):
-    """
-    A domain model.
-    """
-
     pass
 
 

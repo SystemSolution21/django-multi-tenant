@@ -44,7 +44,6 @@ SHARED_APPS = [
     "rest_framework",
     "django_filters",
     "tenants.apps.TenantsConfig",  # local tenants app
-    "blog.apps.BlogConfig",  # local blog app
     "tenant_users.permissions",  # django-tenant-users
     "tenant_users.tenants",  # django-tenant-users
 ]
@@ -55,6 +54,7 @@ TENANT_APPS = [
     "django.contrib.contenttypes",
     "tenant_users.permissions",  # django-tenant-users
     "tasks.apps.TasksConfig",  # local tasks app
+    "blog.apps.BlogConfig",  # local blog app - tenant-specific content
 ]
 
 # Application definition (public/shared apps and tenant apps)

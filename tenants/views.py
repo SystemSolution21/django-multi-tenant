@@ -192,6 +192,24 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         except User.DoesNotExist:
             pass
 
+        # Check for existing invitations (from public schema)
+        with schema_context("public"):
+            # Check for pending invitations
+            pending_invitation = UserInvitation.objects.filter(
+                tenant=current_tenant, email=form.instance.email, is_accepted=False
+            ).first()
+            if pending_invitation:
+                messages.error(
+                    self.request,
+                    f"An invitation has already been sent to {form.instance.email}.",
+                )
+                return self.form_invalid(form)
+
+            # Delete any old accepted invitations to avoid unique constraint violation
+            UserInvitation.objects.filter(
+                tenant=current_tenant, email=form.instance.email, is_accepted=True
+            ).delete()
+
         response = super().form_valid(form)
 
         # Send invitation email (self.object is now available)
@@ -302,7 +320,14 @@ class AcceptInvitationView(View):
                     tenant=invitation.tenant, is_primary=True
                 ).first()
             if tenant_domain:
-                return redirect(f"http://{tenant_domain.domain}/tenants/users/")
+                # Get the port from the current request
+                port = request.get_port()
+                domain_with_port = (
+                    f"{tenant_domain.domain}:{port}"
+                    if port not in ["80", "443"]
+                    else tenant_domain.domain
+                )
+                return redirect(f"http://{domain_with_port}/tenants/users/")
         except Exception:
             pass
 
@@ -348,6 +373,10 @@ class UserRemoveView(LoginRequiredMixin, View):
 
         # Remove user from tenant (keeps user account intact)
         tenant.remove_user(user_obj=user)
+
+        # Delete any invitations for this user in this tenant (from public schema)
+        with schema_context("public"):
+            UserInvitation.objects.filter(tenant=tenant, email=user.email).delete()
 
         messages.success(
             request, f"User {user.email} has been removed from {tenant.name}"

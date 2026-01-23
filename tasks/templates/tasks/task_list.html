@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Tasks - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Tasks</h1>
+    <a href="{% url 'task_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Task
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="todo" {% if request.GET.status == 'todo' %}selected{% endif %}>To Do</option>
+                    <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="done" {% if request.GET.status == 'done' %}selected{% endif %}>Done</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="priority" class="form-label">Priority</label>
+                <select name="priority" id="priority" class="form-select">
+                    <option value="">All</option>
+                    <option value="high" {% if request.GET.priority == 'high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if request.GET.priority == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if request.GET.priority == 'low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="assignee" class="form-label">Assignee</label>
+                <select name="assignee" id="assignee" class="form-select">
+                    <option value="">All</option>
+                    <option value="me" {% if request.GET.assignee == 'me' %}selected{% endif %}>My Tasks</option>
+                    <option value="unassigned" {% if request.GET.assignee == 'unassigned' %}selected{% endif %}>Unassigned</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" name="search" id="search" class="form-control" 
+                       placeholder="Search tasks..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                <a href="{% url 'task_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if tasks %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Task</th>
+                <th>Project</th>
+                <th>Assignee</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td><a href="{% url 'task_detail' task.pk %}">[{{ task.project.key }}-{{ task.pk }}]</a></td>
+                <td>
+                    <a href="{% url 'task_detail' task.pk %}">{{ task.name }}</a>
+                </td>
+                <td>
+                    <a href="{% url 'project_detail' task.project.pk %}">{{ task.project.name }}</a>
+                </td>
+                <td>{{ task.assignee.email|default:"Unassigned" }}</td>
+                <td>
+                    {% if task.status == 'done' %}
+                        <span class="badge bg-success">{{ task.get_status_display }}</span>
+                    {% elif task.status == 'in_progress' %}
+                        <span class="badge bg-warning text-dark">{{ task.get_status_display }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ task.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if task.priority == 'high' %}
+                        <span class="badge bg-danger">{{ task.get_priority_display }}</span>
+                    {% elif task.priority == 'medium' %}
+                        <span class="badge bg-warning text-dark">{{ task.get_priority_display }}</span>
+                    {% else %}
+                        <span class="badge bg-info">{{ task.get_priority_display }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ task.due_date|date:"M d, Y"|default:"-" }}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{% url 'task_update' task.pk %}" class="btn btn-outline-secondary">Edit</a>
+                        <a href="{% url 'task_delete' task.pk %}" class="btn btn-outline-danger">Delete</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if is_paginated %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+        </li>
+        {% endif %}
+        <li class="page-item active">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">
+    <h4>No tasks found</h4>
+    <p>{% if request.GET %}Try adjusting your filters.{% else %}Get started by creating your first task.{% endif %}</p>
+    <a href="{% url 'task_create' %}" class="btn btn-primary">Create Task</a>
+</div>
+{% endif %}
+{% endblock %}
+

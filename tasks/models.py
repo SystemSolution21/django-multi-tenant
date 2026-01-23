@@ -10,7 +10,7 @@ from tenants.models import User
 
 class Project(TimeStampedModel):
     """
-    A project model (tenant-specific).
+    A project model.
     """
 
     # Attributes
@@ -35,7 +35,7 @@ class Project(TimeStampedModel):
 
 class Task(TimeStampedModel):
     """
-    A task model (tenant-specific).
+    A task model.
     """
 
     STATUS_CHOICES: list[tuple[str, str]] = [
@@ -43,7 +43,6 @@ class Task(TimeStampedModel):
         ("in_progress", "In Progress"),
         ("done", "Done"),
     ]
-
     PRIORITY_CHOICES: list[tuple[str, str]] = [
         ("low", "Low"),
         ("medium", "Medium"),
@@ -68,7 +67,7 @@ class Task(TimeStampedModel):
         max_length=20, choices=PRIORITY_CHOICES, default="medium"
     )
     due_date = models.DateField(null=True, blank=True)
-    is_done = models.BooleanField(default=False)  # Keep for backward compatibility
+    is_done = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]
@@ -77,10 +76,10 @@ class Task(TimeStampedModel):
             models.Index(fields=["assignee"], name="task_assignee_idx"),
         ]
 
-    def __str__(self) -> str:
-        return f"[{self.project.key}-{self.pk}] {self.name}"
-
-    def save(self, *args, **kwargs):
-        # Auto-update is_done based on status
+    def save(self, *args, **kwargs) -> None:
+        # Auto-sync is_done with status
         self.is_done = self.status == "done"
         super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"[{self.project.key}-{self.pk}] {self.name}"

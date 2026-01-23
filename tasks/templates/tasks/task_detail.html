@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.name }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        [{{ task.project.key }}-{{ task.pk }}] {{ task.name }}
+    </h1>
+    <div>
+        <a href="{% url 'task_update' task.pk %}" class="btn btn-outline-primary">Edit</a>
+        <a href="{% url 'task_delete' task.pk %}" class="btn btn-outline-danger">Delete</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Description</h5>
+                <p class="card-text">{{ task.description|default:"No description provided"|linebreaks }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Details</h5>
+                <dl>
+                    <dt>Project:</dt>
+                    <dd>
+                        <a href="{% url 'project_detail' task.project.pk %}">
+                            {{ task.project.name }} ({{ task.project.key }})
+                        </a>
+                    </dd>
+
+                    <dt>Status:</dt>
+                    <dd>
+                        {% if task.status == 'done' %}
+                            <span class="badge bg-success">{{ task.get_status_display }}</span>
+                        {% elif task.status == 'in_progress' %}
+                            <span class="badge bg-warning text-dark">{{ task.get_status_display }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ task.get_status_display }}</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt>Priority:</dt>
+                    <dd>
+                        {% if task.priority == 'high' %}
+                            <span class="badge bg-danger">{{ task.get_priority_display }}</span>
+                        {% elif task.priority == 'medium' %}
+                            <span class="badge bg-warning text-dark">{{ task.get_priority_display }}</span>
+                        {% else %}
+                            <span class="badge bg-info">{{ task.get_priority_display }}</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt>Assignee:</dt>
+                    <dd>{{ task.assignee.email|default:"Unassigned" }}</dd>
+
+                    <dt>Due Date:</dt>
+                    <dd>
+                        {% if task.due_date %}
+                            {{ task.due_date|date:"F d, Y" }}
+                            {% if task.due_date < today and task.status != 'done' %}
+                                <span class="badge bg-danger">Overdue</span>
+                            {% endif %}
+                        {% else %}
+                            No due date
+                        {% endif %}
+                    </dd>
+
+                    <dt>Created:</dt>
+                    <dd>{{ task.created_at|date:"F d, Y g:i A" }}</dd>
+
+                    <dt>Last Updated:</dt>
+                    <dd>{{ task.updated_at|date:"F d, Y g:i A" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'task_list' %}" class="btn btn-secondary">Back to Tasks</a>
+    <a href="{% url 'project_detail' task.project.pk %}" class="btn btn-secondary">View Project</a>
+</div>
+{% endblock %}
+

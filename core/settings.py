@@ -30,7 +30,7 @@ SECRET_KEY = "django-insecure-9!xkknqg2)%y!liiwvy9i_o*za%qitsl!7*mk-406&ihc)p$pr
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 # Application definition (public/shared apps only)
 SHARED_APPS = [
@@ -161,7 +161,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "static/"  # Static files for each root app
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -1,31 +1,35 @@
-# Building a Multi-tenant App with Django
+# Building a Multi-tenant App with Django-tenants and django-tenant-users
 
-## Want to learn how to build this?
+This project is a SaaS multi-tenant application using the specific combination of:
 
-Check out the [post](#).
+- **Django** (core framework)
+- **django-tenants** (schema-based multi-tenancy)
+- **django-tenant-users** (shared user pool with per-tenant permissions)
 
-## Want to use this project?
+## Prerequisites
 
-1. Fork/Clone
+The application requires a PostgreSQL database. The database user must have `CREATEDB` privileges to create new schemas dynamically.
 
-1. Spin up a [PostgreSQL](https://www.postgresql.org/) database using Docker:
+See `database.txt` for the specific SQL commands to configure the database user and permissions.
 
-   ```sh
-   $ docker run --name sprinty-postgres -p 5432:5432 \
-       -e POSTGRES_USER=sprinty -e POSTGRES_PASSWORD=complexpassword123 \
-       -e POSTGRES_DB=sprinty -d postgres
-   ```
+## User Management
 
-1. Populate the database:
+- Users are **global** (live in `public` schema)
+- Authentication is shared across all tenants
+- Authorization (permissions) is per-tenant
 
-   ```sh
-   python manage.py populate_db
-   ```
+## Schema Context
 
-1. Your tenants should be accessible at the following URLs:
+- The `public` schema is the global (shared) namespace
+- Each tenant has its own PostgreSQL schema (e.g., `demo1`, `demo2`)
+- The `connection.schema_name` variable indicates the current schema context
 
-   - `public`: [http://localhost:8000/api/](http://localhost:8000/api/)
-   - `demo1`: [http://demo1.localhost:8000/api/](http://demo1.localhost:8000/api/)
-   - `demo2`: [http://demo2.localhost:8000/api/](http://demo2.localhost:8000/api/)
+## Workflow
 
-1. Tenant information including admin credentials, can be found in *[tenants.json](https://github.com/duplxey/django-multi-tenant/blob/master/tenants/data/tenants.json)* file.
+1. **Database Reset**: Connect to the `postgres` system database to drop and recreate the application database.
+2. **Shared Migrations**: Run `migrate_schemas --shared` to set up the public schema tables.
+3. **Public Tenant**: Call `create_public_tenant` to initialize the system.
+4. **Private Tenants**: Iterate through the JSON data:
+    - Create the tenant owner (User)
+    - Call `provision_tenant` to create the schema and domain
+    - Link the root admin user to the new tenant for administrative access

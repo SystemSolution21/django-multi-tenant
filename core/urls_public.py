@@ -23,4 +23,5 @@ urlpatterns: list[Any] = [
     path(route="api/", view=include(arg=router.urls)),
     path(route="tenants/", view=include(arg="tenants.urls")),
     path(route="admin/", view=admin.site.urls),
+    path(route="blog/", view=include(arg="blog.urls")),
 ]

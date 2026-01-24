@@ -10,16 +10,14 @@
       rel="stylesheet"
     />
   </head>
-  
+
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
       <div class="container-fluid">
         <a class="navbar-brand" href="{% url 'index' %}">
-        {% if request.tenant.schema_name == 'public' %} 
-          SaaS Platform 
-        {% else %} 
-          {{ request.tenant.name }} 
-        {% endif %}
+          {% if request.tenant.schema_name == 'public' %} 
+            SaaS Platform 
+          {% else%} {{ request.tenant.name }} {% endif %}
         </a>
 
         <button
@@ -33,25 +31,28 @@
 
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto">
-          {% if user.is_authenticated %} 
-            {% if request.tenant.schema_name == 'public' %} 
-              {% if user.is_superuser %}
+            {% if request.tenant.schema_name == 'public' %}
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
+              </li>
+              {% if user.is_authenticated and user.is_superuser %}
                 <li class="nav-item">
                   <a class="nav-link" href="{% url 'tenant_list' %}">Tenants</a>
                 </li>
               {% endif %} 
-            {% else %}
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'project_list' %}">Projects</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'task_list' %}">Tasks</a>
-              </li>
-              {% if user.is_tenant_admin %}
+            {% else %} 
+              {% if user.is_authenticated %}
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'project_list' %}">Projects</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'task_list' %}">Tasks</a>
+                </li>
+                {% if user.is_tenant_admin %}
                 <li class="nav-item">
                   <a class="nav-link" href="{% url 'user_list' %}">Users</a>
                 </li>
-              {% endif %} 
+                {% endif %}
             {% endif %} 
           {% endif %}
           </ul>
@@ -77,17 +78,17 @@
     <main class="container mt-4">
       {% if messages %} 
         {% for message in messages %}
-        <div
-          class="alert alert-{{ message.tags }} alert-dismissible fade show"
-          role="alert"
-        >
-          {{ message }}
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="alert"
-          ></button>
-        </div>
+          <div
+            class="alert alert-{{ message.tags }} alert-dismissible fade show"
+            role="alert"
+          >
+            {{ message }}
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+            ></button>
+          </div>
         {% endfor %} 
       {% endif %} 
       {% block content %}{% endblock %}

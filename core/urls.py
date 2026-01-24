@@ -29,6 +29,7 @@ urlpatterns: list[Any] = [
     path(route="", view=index_view, name="index"),
     path(route="api/", view=include(arg=router.urls)),
     path(route="tenants/", view=include(arg="tenants.urls")),  # Tenants web UI
+    path(route="blog/", view=include(arg="blog.urls")),  # Blog web UI
     path(route="", view=include(arg="tasks.urls")),  # Tasks web UI
     path(route="admin/", view=admin.site.urls),
 ]

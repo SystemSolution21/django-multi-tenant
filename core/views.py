@@ -1,8 +1,9 @@
 # core/views.py
 
 # Import django libraries
+from typing import Any
 from django.db import connection
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from blog.models import Article
@@ -11,11 +12,11 @@ from blog.models import Article
 from tasks.models import Project, Task
 
 
-def index_view(request):
+def index_view(request) -> JsonResponse | HttpResponse:
     """
     Index view for both public and tenant schemas.
     """
-    # Check if this is an API request
+    # API request
     if request.path.startswith("/api/") or request.META.get(
         "HTTP_ACCEPT", ""
     ).startswith("application/json"):
@@ -29,7 +30,7 @@ def index_view(request):
         )
 
     # HTML response for browser requests
-    context = {
+    context: dict[str, Any] = {
         "schema_name": connection.schema_name,
         "is_public": connection.schema_name == "public",
     }
@@ -51,4 +52,4 @@ def index_view(request):
             }
         )
 
-    return render(request, "core/index.html", context)
+    return render(request=request, template_name="core/index.html", context=context)

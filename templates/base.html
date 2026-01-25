@@ -23,6 +23,7 @@
       <div class="container-fluid">
         <a class="navbar-brand" href="{% url 'index' %}">
           {% if request.tenant.schema_name == 'public' %} 
+            <img src="{% static 'core/SaaS.svg' %}" alt="SaaS Platform" height="30" />
             SaaS Platform 
           {% else%} {{ request.tenant.name }} {% endif %}
         </a>
@@ -101,18 +102,18 @@
                 {% endif %}
               {% else %}
                 <li class="nav-item">
-                  <a class="nav-link" href="{% url 'index' %}">Dashboard</a>
+                  <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active-link{% endif %}" href="{% url 'index' %}">Dashboard</a>
                 </li>
                 {% if user.is_authenticated %}
                   <li class="nav-item">
-                    <a class="nav-link" href="{% url 'project_list' %}">Projects</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'project_list' %}active-link{% endif %}" href="{% url 'project_list' %}">Projects</a>
                   </li>
                   <li class="nav-item">
-                    <a class="nav-link" href="{% url 'task_list' %}">Tasks</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'task_list' %}active-link{% endif %}" href="{% url 'task_list' %}">Tasks</a>
                   </li>
                   {% if user.is_tenant_admin %}
                     <li class="nav-item">
-                      <a class="nav-link" href="{% url 'user_list' %}">Users</a>
+                      <a class="nav-link {% if request.resolver_match.url_name == 'user_list' %}active-link{% endif %}" href="{% url 'user_list' %}">Users</a>
                     </li>
                   {% endif %}
                 {% endif %}

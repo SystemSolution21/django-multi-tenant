@@ -1,3 +1,4 @@
+# core/settings.py
 """
 Django settings for core project.
 
@@ -162,6 +163,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"  # Static files for each root app
+
+STATICFILES_DIRS: list[Path] = [BASE_DIR / "static"]  # Custom static files directory
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -3,8 +3,10 @@
 # Import django libraries
 from typing import Any
 from django.db import connection
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 
 from blog.models import Article
 
@@ -16,10 +18,53 @@ def index_view(request) -> JsonResponse | HttpResponse:
     """
     Index view for both public and tenant schemas.
     """
-    # API request
+    # API request or Search request
     if request.path.startswith("/api/") or request.META.get(
         "HTTP_ACCEPT", ""
     ).startswith("application/json"):
+        # Search Logic
+        query = request.GET.get("q")
+        if query:
+            results = []
+            if connection.schema_name == "public":
+                articles = Article.objects.filter(
+                    Q(title__icontains=query) | Q(content__icontains=query)
+                )[:5]
+                for art in articles:
+                    results.append(
+                        {
+                            "type": "Article",
+                            "title": art.title,
+                            "url": reverse("article_detail", args=[art.pk]),
+                        }
+                    )
+            else:
+                projects = Project.objects.filter(
+                    Q(name__icontains=query) | Q(description__icontains=query)
+                )[:3]
+                for proj in projects:
+                    results.append(
+                        {
+                            "type": "Project",
+                            "title": proj.name,
+                            "url": reverse("project_detail", args=[proj.pk]),
+                        }
+                    )
+
+                tasks = Task.objects.filter(
+                    Q(name__icontains=query) | Q(description__icontains=query)
+                )[:5]
+                for task in tasks:
+                    results.append(
+                        {
+                            "type": "Task",
+                            "title": task.name,
+                            "url": reverse("task_detail", args=[task.pk]),
+                        }
+                    )
+
+            return JsonResponse({"results": results})
+
         return JsonResponse(
             data={
                 "name": "django-multi-tenant",

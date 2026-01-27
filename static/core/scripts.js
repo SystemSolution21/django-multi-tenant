@@ -9,7 +9,7 @@ if (sidebarMenu) {
     // Exclude '/' to prevent the Home link from being active on every page
     if (
       currentPath === linkPath ||
-      (linkPath !== "/" && currentPath.startsWith(linkPath))
+      (linkPath !== "/" && currentPath.startsWith(linkPath + "/"))
     ) {
       link.classList.add("active-link");
     }

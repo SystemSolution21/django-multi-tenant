@@ -28,7 +28,7 @@ For a real-world SaaS application, with this **step-by-step development order**:
 
 ### 4. **"Blog App - Content Management"**
 
-- Decide global vs tenant-specific blogs
+- Global blogs and content management
 - Content permissions and publishing workflow
 - Author management
 

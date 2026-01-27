@@ -74,6 +74,7 @@ class GlobalSearchAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        # 2. Validate query parameter
         query: Any = request.query_params.get("q", None)
         if not query or len(query) < 2:
             return Response(
@@ -83,11 +84,11 @@ class GlobalSearchAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 2. Get all tenants (subdomains/schemas)
+        # 3. Get all tenants (subdomains/schemas)
         tenants: BaseManager[Tenant] = Tenant.objects.exclude(schema_name="public")
         all_results: list[dict[str, Any]] = []
 
-        # 2. Concurrent Execution: Use a thread pool to search tenants in parallel.
+        # 4. Concurrent Execution using a thread pool to search tenants in parallel.
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             future_to_tenant: dict[Future[list[Any]], Tenant] = {
                 executor.submit(search_in_tenant_for_api, tenant, query): tenant
@@ -100,7 +101,7 @@ class GlobalSearchAPIView(APIView):
                     if tenant_results:
                         all_results.extend(tenant_results)
                 except Exception as exc:
-                    # In a production app, you should log this error.
+                    # In a production app, should log this error.
                     print(
                         f"Tenant search for {future_to_tenant[future].schema_name} generated an exception: {exc}"
                     )

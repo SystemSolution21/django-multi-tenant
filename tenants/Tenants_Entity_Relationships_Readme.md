@@ -39,7 +39,7 @@ Here is the impact of deleting specific entities based on standard `on_delete` b
 
 * **Deleting a Tenant (Highest Impact):**
   * Because `Domain` has a ForeignKey to `Tenant` with `on_delete=models.CASCADE`, deleting a Tenant **automatically deletes all associated Domains**.
-  * It triggers a signal to **drop the PostgreSQL schema**, permanently erasing all data inside that tenant (e.g., blog posts, orders).
+  * It triggers a signal to **drop the PostgreSQL schema**, permanently erasing all data inside that tenant (e.g., projects, tasks).
   * It **does not** delete the Users. The users simply lose their link/permissions to that specific tenant.
 
 * **Deleting a Domain:**

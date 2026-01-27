@@ -16,22 +16,26 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-9!xkknqg2)%y!liiwvy9i_o*za%qitsl!7*mk-406&ihc)p$pr"
+SECRET_KEY: str | None = os.getenv(key="SECRET_KEY", default="your-secret-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG: bool = os.getenv(key="DEBUG", default="True") == "True"
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS: list[str] = [
+    host.strip("\"[]'")
+    for host in os.getenv(key="ALLOWED_HOSTS", default="*").split(",")
+]
 
 # Application definition (public/shared apps only)
 SHARED_APPS = [
@@ -64,8 +68,9 @@ INSTALLED_APPS = list(SHARED_APPS) + [
 ]
 
 MIDDLEWARE = [
-    "django_tenants.middleware.main.TenantMainMiddleware",
+    "django_tenants.middleware.main.TenantMainMiddleware",  # django-tenants
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # whitenoise for static files in production
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -164,19 +169,41 @@ USE_TZ = True
 
 STATIC_URL = "static/"  # Static files for each root app
 
-STATICFILES_DIRS: list[Path] = [BASE_DIR / "static"]  # Custom static files directory
+STATICFILES_DIRS: list[Path] = [
+    BASE_DIR / "static"
+]  # Static files directory globally accessible by all apps in the project while in development
+
+STATIC_ROOT: Path = (
+    BASE_DIR / "staticfiles"
+)  # All static files will be collected here for deployment
+
+# WhiteNoise configuration for production
+if not DEBUG:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+# Media files (user uploaded files)
+MEDIA_ROOT: Path = BASE_DIR / "media"
+MEDIA_URL = "/media/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Email settings for production
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_HOST = "smtp.gmail.com"  # Custom SMTP server
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = "your-email@gmail.com"
-# EMAIL_HOST_PASSWORD = "your-app-password"
-# DEFAULT_FROM_EMAIL = "your-email@gmail.com"
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Email configuration for password reset
+# EMAIL_BACKEND: str | None = os.environ.get("EMAIL_BACKEND")
+# EMAIL_HOST: str | None = os.environ.get("EMAIL_HOST")
+# EMAIL_PORT: str | None = os.environ.get("EMAIL_PORT")
+# EMAIL_USE_TLS: str | None = os.environ.get("EMAIL_USE_TLS")
+# EMAIL_HOST_USER: str | None = os.environ.get("EMAIL_USER")
+# EMAIL_HOST_PASSWORD: str | None = os.environ.get("EMAIL_PASS")
+# DEFAULT_FROM_EMAIL: str | None = os.environ.get("EMAIL_USER")
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # for development

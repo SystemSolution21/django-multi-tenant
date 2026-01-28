@@ -49,6 +49,9 @@
                 </li>
               {% endif %} 
             {% else %} 
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
+                </li>
               {% if user.is_authenticated %}
                 <li class="nav-item">
                   <a class="nav-link" href="{% url 'project_list' %}">Projects</a>
@@ -113,6 +116,9 @@
                 <li class="nav-item">
                   <a class="nav-link" href="{% url 'index' %}">Dashboard</a>
                 </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
+                  </li>
                 {% if user.is_authenticated %}
                   <li class="nav-item">
                     <a class="nav-link" href="{% url 'project_list' %}">Projects</a>

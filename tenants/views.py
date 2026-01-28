@@ -1,15 +1,16 @@
 # tenants/views.py
 
 # Import standard libraries
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 # Import django libraries
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.mail import send_mail
 from django.db import connection
+from django.db.models import Q
 from django.db.models.manager import BaseManager
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views import View
@@ -28,9 +29,11 @@ from rest_framework.permissions import IsAuthenticated
 
 # Import local modules
 from tenants.mixins import TenantAdminRequiredMixin
-from tenants.models import Tenant, User, UserInvitation
+from tenants.models import Domain, Tenant, User, UserInvitation
 from tenants.serializers import TenantSerializer
 from tenants.utils import create_tenant
+from blog.models import Article
+from tasks.models import Project, Task
 
 
 class TenantListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -60,19 +63,23 @@ class TenantDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
 
 
 class TenantCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    """
+    Create a new tenant.
+    """
+
     model = Tenant
     fields: list[str] = ["name", "schema_name"]
     template_name = "tenants/tenant_form.html"
-    success_url = reverse_lazy("tenant_list")
+    success_url: Any = reverse_lazy("tenant_list")
 
-    def test_func(self):
+    def test_func(self) -> bool:
         return self.request.user.is_superuser
 
-    def form_valid(self, form):
+    def form_valid(self, form) -> HttpResponseRedirect:
         user = self.request.user
         assert isinstance(user, User), "User must be authenticated"
 
-        tenant_data = {
+        tenant_data: dict[str, Any] = {
             "name": form.cleaned_data["name"],
             "schema_name": form.cleaned_data["schema_name"],
             "subdomain": form.cleaned_data["schema_name"],
@@ -80,26 +87,34 @@ class TenantCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
             "password": "temp_password",
             "root_user": user,
         }
-        create_tenant(tenant_data)
-        return redirect("tenant_list")
+        create_tenant(tenant_data=tenant_data)
+        return redirect(to="tenant_list")
 
 
 class TenantUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    model = Tenant
-    fields = ["name"]
-    template_name = "tenants/tenant_form.html"
-    success_url = reverse_lazy("tenant_list")
+    """
+    Update an existing tenant.
+    """
 
-    def test_func(self):
+    model = Tenant
+    fields: list[str] = ["name"]
+    template_name = "tenants/tenant_form.html"
+    success_url: Any = reverse_lazy("tenant_list")
+
+    def test_func(self) -> bool:
         return self.request.user.is_superuser
 
 
 class TenantDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    """
+    Delete a tenant.
+    """
+
     model = Tenant
     template_name = "tenants/tenant_confirm_delete.html"
-    success_url = reverse_lazy("tenant_list")
+    success_url: Any = reverse_lazy("tenant_list")
 
-    def test_func(self):
+    def test_func(self) -> bool:
         return self.request.user.is_superuser
 
 
@@ -107,14 +122,14 @@ class TenantSelfUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """Allow tenant admin to update their own tenant details only"""
 
     model = Tenant
-    fields = ["name"]  # Not schema_name!
+    fields: list[str] = ["name"]  # Not schema_name!
     template_name = "tenants/tenant_self_update.html"
 
-    def test_func(self):
+    def test_func(self) -> Any | Literal[False]:
         # Only tenant admin can edit their own tenant
         return self.request.user.is_staff and connection.schema_name != "public"
 
-    def get_object(self):
+    def get_object(self) -> Tenant:
         # Get current tenant from schema context
         return Tenant.objects.get(schema_name=connection.schema_name)
 
@@ -124,7 +139,7 @@ class IsPublicSuperUser(permissions.BasePermission):
     Custom permission to only allow superusers from the public schema.
     """
 
-    def has_permission(self, request, view):
+    def has_permission(self, request, view) -> Any | Any:
         return (
             request.user
             and request.user.is_superuser
@@ -139,7 +154,7 @@ class TenantViewSet(viewsets.ModelViewSet):
 
     queryset = Tenant.objects.all()
     serializer_class = TenantSerializer
-    permission_classes = [IsAuthenticated, IsPublicSuperUser]
+    permission_classes: list[Any] = [IsAuthenticated, IsPublicSuperUser]
 
 
 class TenantUserListView(TenantAdminRequiredMixin, ListView):
@@ -152,9 +167,9 @@ class TenantUserListView(TenantAdminRequiredMixin, ListView):
     def get_queryset(self):
         return User.objects.filter(tenants__schema_name=connection.schema_name)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        current_tenant = Tenant.objects.get(schema_name=connection.schema_name)
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        context: dict[str, Any] = super().get_context_data(**kwargs)
+        current_tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
         # Query invitations from public schema (SHARED_APPS)
         with schema_context("public"):
             context["pending_invitations"] = UserInvitation.objects.filter(
@@ -170,71 +185,75 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         object: UserInvitation
 
     model = UserInvitation
-    fields = ["email", "role"]
+    fields: list[str] = ["email", "role"]
     template_name = "tenants/user_invite.html"
-    success_url = reverse_lazy("user_list")
+    success_url: Any = reverse_lazy("user_list")
 
-    def form_valid(self, form):
-        user = cast(User, self.request.user)
-        current_tenant = Tenant.objects.get(schema_name=connection.schema_name)
+    def form_valid(self, form) -> HttpResponse:
+        user: User = cast(User, self.request.user)
+        current_tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
 
         form.instance.tenant = current_tenant
         form.instance.invited_by = user
 
         # Check if user already exists and is in tenant
         try:
-            existing_user = User.objects.get(email=form.instance.email)
+            existing_user: User = User.objects.get(email=form.instance.email)
             if existing_user.tenants.filter(
                 schema_name=connection.schema_name
             ).exists():
-                messages.error(self.request, "User is already a member of this tenant.")
-                return self.form_invalid(form)
+                messages.error(
+                    request=self.request,
+                    message="User is already a member of this tenant.",
+                )
+                return self.form_invalid(form=form)
         except User.DoesNotExist:
             pass
 
         # Check for existing invitations (from public schema)
         with schema_context("public"):
             # Check for pending invitations
-            pending_invitation = UserInvitation.objects.filter(
+            pending_invitation: UserInvitation | None = UserInvitation.objects.filter(
                 tenant=current_tenant, email=form.instance.email, is_accepted=False
             ).first()
             if pending_invitation:
                 messages.error(
-                    self.request,
-                    f"An invitation has already been sent to {form.instance.email}.",
+                    request=self.request,
+                    message=f"An invitation has already been sent to {form.instance.email}.",
                 )
-                return self.form_invalid(form)
+                return self.form_invalid(form=form)
 
             # Delete any old accepted invitations to avoid unique constraint violation
             UserInvitation.objects.filter(
                 tenant=current_tenant, email=form.instance.email, is_accepted=True
             ).delete()
 
-        response = super().form_valid(form)
+        response: HttpResponse = super().form_valid(form=form)
 
         # Send invitation email (self.object is now available)
         # Use public domain for invitation URL so user can login there
-        from tenants.models import Domain
 
         with schema_context("public"):
-            public_tenant = Tenant.objects.get(schema_name="public")
-            public_domain = Domain.objects.filter(
+            public_tenant: Tenant = Tenant.objects.get(schema_name="public")
+            public_domain: Domain | None = Domain.objects.filter(
                 tenant=public_tenant, is_primary=True
             ).first()
 
         if public_domain:
             # Get the port from the current request
-            port = self.request.get_port()
-            domain_with_port = (
+            port: str = self.request.get_port()
+            domain_with_port: str = (
                 f"{public_domain.domain}:{port}"
                 if port not in ["80", "443"]
                 else public_domain.domain
             )
-            invitation_url = f"http://{domain_with_port}/tenants/invitations/{self.object.token}/accept/"
+            invitation_url: str = f"http://{domain_with_port}/tenants/invitations/{self.object.token}/accept/"
         else:
             # Fallback to current domain if public domain not found
             invitation_url = self.request.build_absolute_uri(
-                reverse("accept_invitation", kwargs={"token": self.object.token})
+                location=reverse(
+                    viewname="accept_invitation", kwargs={"token": self.object.token}
+                )
             )
 
         send_mail(
@@ -245,7 +264,9 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
             fail_silently=False,
         )
 
-        messages.success(self.request, f"Invitation sent to {self.object.email}")
+        messages.success(
+            request=self.request, message=f"Invitation sent to {self.object.email}"
+        )
         return response
 
 
@@ -383,3 +404,68 @@ class UserRemoveView(LoginRequiredMixin, View):
         )
 
         return HttpResponseRedirect(self.success_url)
+
+
+class TenantSearchJSONView(LoginRequiredMixin, View):
+    """
+    Search for local tenant content (Projects, Tasks) and return JSON.
+    """
+
+    def get(self, request: Any) -> JsonResponse:
+        query: Any = request.GET.get("q", "")
+        results: list[dict[str, Any]] = []
+
+        # This search is only for tenant schemas
+        if query and len(query) >= 2 and connection.schema_name != "public":
+            # Search Projects
+            # _default_manager bypass any custom 'objects' manager that might be filtering results
+            projects = Project._default_manager.filter(name__icontains=query)[:5]
+            for project in projects:
+                results.append(
+                    {
+                        "title": project.name,
+                        "url": reverse(
+                            viewname="project_detail", kwargs={"pk": project.pk}
+                        ),
+                        "type": "Project",
+                    }
+                )
+
+            # Search Tasks
+            tasks = Task._default_manager.filter(name__icontains=query)[:5]
+            for task in tasks:
+                results.append(
+                    {
+                        "title": task.name,
+                        "url": reverse(viewname="task_detail", kwargs={"pk": task.pk}),
+                        "type": "Task",
+                    }
+                )
+
+        return JsonResponse({"results": results})
+
+
+class PublicBlogSearchView(View):
+    """
+    Search for blog articles in the public schema.
+    """
+
+    def get(self, request) -> JsonResponse:
+        query: Any = request.GET.get("q", "")
+        results: list[dict[str, Any]] = []
+
+        if query and len(query) >= 2:
+            with schema_context("public"):
+                # Search title OR content and get distinct results
+                articles = Article.objects.filter(
+                    Q(title__icontains=query) | Q(content__icontains=query)
+                ).distinct()[:5]
+
+                for article in articles:
+                    # Blog articles are in the public schema, so the URL should be relative.
+                    url: str = f"/blog/{article.pk}/"
+
+                    results.append(
+                        {"title": article.title, "url": url, "type": "Article"}
+                    )
+        return JsonResponse(data={"results": results})

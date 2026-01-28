@@ -15,7 +15,12 @@
     <link rel="stylesheet" type="text/css" href="{% static 'core/style.css' %}">
 
     <!-- Favicon Icon -->
-    <link rel="icon" type="image/x-icon" href="{% static 'core/favicon.ico' %}">    
+    <link rel="icon" type="image/x-icon" href="{% static 'core/favicon.ico' %}">
+
+    <script>
+      // Make the public schema flag available to JavaScript
+      window.IS_PUBLIC_SCHEMA = {{ is_public_schema|yesno:"true,false" }};
+    </script>
   </head>
 
   <body>

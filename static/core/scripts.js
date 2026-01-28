@@ -38,21 +38,49 @@ if (searchForm && searchInput && searchModalEl) {
     `;
     searchModal.show();
 
-    fetch(`/?q=${encodeURIComponent(query)}`, {
-      headers: {
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+    const headers = {
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    };
+
+    // On tenant sites, the local search endpoint is different from the public site's.
+    // Public site search is handled by the root view.
+    // Tenant sites use a dedicated JSON search view.
+    let localSearchUrl = `/?q=${encodeURIComponent(query)}`;
+    if (!window.IS_PUBLIC_SCHEMA) {
+      localSearchUrl = `/tenants/search/?q=${encodeURIComponent(query)}`;
+    }
+
+    const localSearch = fetch(localSearchUrl, {
+      headers,
     })
       .then((response) => response.json())
-      .then((data) => {
+      .catch(() => ({ results: [] })); // Gracefully handle if local search fails or is not implemented
+
+    // Only perform the public search if we are NOT on the public schema
+    // to avoid duplicate results.
+    const publicSearch = window.IS_PUBLIC_SCHEMA
+      ? Promise.resolve({ results: [] })
+      : fetch(`/tenants/search/public/?q=${encodeURIComponent(query)}`, {
+          headers,
+        })
+          .then((response) => response.json())
+          .catch(() => ({ results: [] }));
+
+    Promise.all([localSearch, publicSearch])
+      .then(([localData, publicData]) => {
         resultsBody.innerHTML = ""; // Clear spinner
 
-        if (data.results && data.results.length > 0) {
+        const results = [
+          ...(localData.results || []),
+          ...(publicData.results || []),
+        ];
+
+        if (results.length > 0) {
           const listGroup = document.createElement("div");
           listGroup.className = "list-group";
 
-          data.results.forEach((item) => {
+          results.forEach((item) => {
             const a = document.createElement("a");
             a.href = item.url;
             a.className = "list-group-item list-group-item-action";

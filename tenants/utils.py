@@ -5,6 +5,8 @@ from typing import Any, Tuple
 
 # Import django libraries
 from django.db import transaction
+from django.http import HttpRequest
+from django_tenants.utils import schema_context
 
 # Import third-party libraries
 from tenant_users.tenants.tasks import provision_tenant
@@ -96,3 +98,33 @@ def remove_user_from_tenant(tenant: Tenant, user) -> None:
     Remove a user from a tenant.
     """
     tenant.remove_user(user)
+
+
+def get_public_domain_url(request: HttpRequest) -> str | None:
+    """
+    Returns the full URL of the public domain, without a trailing slash.
+    """
+    public_domain_url = None
+    try:
+        with schema_context("public"):
+            public_tenant = Tenant.objects.get(schema_name="public")
+            # Try to find the primary domain first
+            domain_obj = Domain.objects.filter(
+                tenant=public_tenant, is_primary=True
+            ).first()
+            # Fallback to the first domain if no primary is set
+            if not domain_obj:
+                domain_obj = Domain.objects.filter(tenant=public_tenant).first()
+
+            if domain_obj:
+                domain = domain_obj.domain
+                port = request.get_port()
+                scheme = request.scheme
+                # Avoid adding port if it's standard or already in the domain string
+                if port and port not in ["80", "443"] and ":" not in domain:
+                    domain = f"{domain}:{port}"
+                public_domain_url = f"{scheme}://{domain}"
+    except (Tenant.DoesNotExist, Domain.DoesNotExist):
+        # Fails silently if public tenant or domain is not set up
+        pass
+    return public_domain_url

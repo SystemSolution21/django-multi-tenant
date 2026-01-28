@@ -18,6 +18,8 @@ from tenants.views import (
     UserEditView,
     UserInviteView,
     UserRemoveView,
+    PublicBlogSearchView,
+    TenantSearchJSONView,
 )
 
 urlpatterns: list[Any] = [
@@ -42,5 +44,15 @@ urlpatterns: list[Any] = [
         route="invitations/<uuid:token>/accept/",
         view=AcceptInvitationView.as_view(),
         name="accept_invitation",
+    ),
+    path(
+        route="search/",
+        view=TenantSearchJSONView.as_view(),
+        name="tenant_search_json",
+    ),
+    path(
+        route="search/public/",
+        view=PublicBlogSearchView.as_view(),
+        name="public_blog_search",
     ),
 ]

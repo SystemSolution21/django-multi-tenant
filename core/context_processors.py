@@ -1,32 +1,24 @@
 # core/context_processors.py
 
+from typing import Any
 from django.http import HttpRequest
-from django_tenants.utils import schema_context
 
-from tenants.models import Domain, Tenant
+from tenants.utils import get_public_domain_url
 
 
-def public_domain_context(request: HttpRequest) -> dict[str, str | None]:
+def public_domain_context(request: HttpRequest) -> dict[str, Any]:
     """
-    Adds the full URL of the public domain to the template context.
-    This allows creating absolute links to the main site from tenant sites.
+    Adds the public domain URL and a flag indicating if the current schema
+    is public to the template context.
     """
-    public_domain_url = None
-    try:
-        # Switch to the public schema to query for the public tenant's domain
-        with schema_context("public"):
-            public_tenant = Tenant.objects.get(schema_name="public")
-            primary_domain = Domain.objects.filter(
-                tenant=public_tenant, is_primary=True
-            ).first()
-            if primary_domain:
-                domain = primary_domain.domain
-                port = request.get_port()
-                if port and port not in ["80", "443"] and ":" not in domain:
-                    domain = f"{domain}:{port}"
-                public_domain_url = f"{request.scheme}://{domain}/"
+    base_url = get_public_domain_url(request)
+    # Add a trailing slash for use in templates like `href="{{ public_domain_url }}"`
+    public_domain_url = f"{base_url}/" if base_url else None
+    # Use getattr to safely access the tenant attribute added by middleware
+    tenant = getattr(request, "tenant", None)
+    is_public_schema = tenant.schema_name == "public" if tenant else False
 
-    except Exception:
-        # Fails silently if public tenant or domain is not set up
-        pass
-    return {"public_domain_url": public_domain_url}
+    return {
+        "public_domain_url": public_domain_url,
+        "is_public_schema": is_public_schema,
+    }

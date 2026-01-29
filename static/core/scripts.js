@@ -1,3 +1,15 @@
+// static/core/scripts.js
+
+/**
+ * Reads the public schema flag from the body's data attribute
+ * and sets a global variable for use in other scripts.
+ */
+const bodyElement = document.body;
+const isPublicSchema = bodyElement.dataset.isPublicSchema === "true";
+
+// Set the global variable for compatibility with existing code.
+window.IS_PUBLIC_SCHEMA = isPublicSchema;
+
 const sidebarMenu = document.getElementById("sidebarMenu");
 const currentPath = window.location.pathname;
 

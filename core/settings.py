@@ -209,3 +209,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # DEFAULT_FROM_EMAIL: str | None = os.environ.get("EMAIL_USER")
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # for development
+
+# Redirects after login and logout
+LOGIN_REDIRECT_URL = "index"
+LOGOUT_REDIRECT_URL = "index"

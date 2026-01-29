@@ -1,13 +1,16 @@
 # tenants/models.py
 
+# Import standard libraries
 import uuid
 from datetime import timedelta
 
+# Import django libraries
 from django.db import models
 from django.utils import timezone
 from django_tenants.models import DomainMixin
 from tenant_users.tenants.models import TenantBase, UserProfile
 
+# Import local modules
 from core.models import TimeStampedModel
 
 
@@ -28,7 +31,7 @@ class User(UserProfile):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
     is_tenant_admin = models.BooleanField(default=False)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.email} ({self.get_role_display()})"  # type: ignore[attr-defined]
 
     @property
@@ -47,7 +50,7 @@ class Domain(DomainMixin, TimeStampedModel):
 class UserInvitation(TimeStampedModel):
     """Model for user invitations to tenants"""
 
-    ROLE_CHOICES = [
+    ROLE_CHOICES: list[tuple[str, str]] = [
         ("admin", "Admin"),
         ("staff", "Staff"),
         ("user", "Regular User"),
@@ -67,9 +70,9 @@ class UserInvitation(TimeStampedModel):
     expires_at = models.DateTimeField()
 
     class Meta:
-        unique_together = ["tenant", "email"]
+        unique_together: list[str] = ["tenant", "email"]
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         if not self.expires_at:
             self.expires_at = timezone.now() + timedelta(days=7)
         super().save(*args, **kwargs)
@@ -78,5 +81,5 @@ class UserInvitation(TimeStampedModel):
         return f"Invitation for {self.email} to {self.tenant.name}"
 
     @property
-    def is_expired(self):
+    def is_expired(self) -> bool:
         return timezone.now() > self.expires_at

@@ -14,9 +14,6 @@ from tenant_users.tenants.tasks import provision_tenant
 # Import local modules
 from tenants.models import Domain, Tenant, User
 
-# Get the user model dynamically
-# User = get_user_model()
-
 
 def create_tenant(tenant_data: dict[str, Any]) -> Tuple[Tenant, Domain]:
     """
@@ -76,8 +73,7 @@ def delete_tenant(tenant: Tenant) -> None:
     Delete a tenant and its associated schema.
     WARNING: This will permanently delete all tenant data.
     """
-    with transaction.atomic():
-        tenant.delete()
+    tenant.delete(force_drop=True)
 
 
 def add_user_to_tenant(

@@ -49,6 +49,7 @@ SHARED_APPS = [
     "rest_framework",
     "django_filters",
     "tenants.apps.TenantsConfig",  # local tenants app
+    "accounts.apps.AccountsConfig",  # local accounts app
     "blog.apps.BlogConfig",  # local blog app
     "tenant_users.permissions",  # django-tenant-users
     "tenant_users.tenants",  # django-tenant-users

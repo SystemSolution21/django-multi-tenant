@@ -1,7 +1,7 @@
 # tenants/admin.py
 
 # Import standard libraries
-from typing import cast
+from typing import Any, Literal, cast
 
 # Import django libraries
 from django.contrib import admin
@@ -15,10 +15,13 @@ from tenants.models import Domain, Tenant, User
 from tasks.models import Project, Task
 
 
-def table_exists(table_name):
+def table_exists(table_name) -> Any | Literal[False]:
+    """
+    Check if a table exists in the current schema.
+    """
     with connection.cursor() as cursor:
         cursor.execute(
-            """
+            sql="""
             SELECT EXISTS (
                 SELECT 1
                 FROM information_schema.tables
@@ -26,9 +29,9 @@ def table_exists(table_name):
                 AND table_name = %s
             )
             """,
-            [table_name],
+            params=[table_name],
         )
-        result = cursor.fetchone()
+        result: tuple[Any, ...] | None = cursor.fetchone()
         return result[0] if result else False
 
 
@@ -36,10 +39,10 @@ def table_exists(table_name):
 class UserAdmin(admin.ModelAdmin):
     """Admin class for the User model."""
 
-    list_display = ["id", "email", "role", "is_tenant_admin", "is_active"]
-    list_display_links = ["id", "email"]
-    search_fields = ["email", "first_name", "last_name"]
-    list_filter = ["role", "is_tenant_admin", "is_active"]
+    list_display: list[str] = ["id", "email", "role", "is_tenant_admin", "is_active"]
+    list_display_links: list[str] = ["id", "email"]
+    search_fields: list[str] = ["email", "first_name", "last_name"]
+    list_filter: list[str] = ["role", "is_tenant_admin", "is_active"]
     fieldsets = [
         (
             None,
@@ -84,7 +87,9 @@ class UserAdmin(admin.ModelAdmin):
     def delete_model(self, request, obj: User) -> None:
         # Cancel the delete if the user owns any tenant
         if Tenant.objects.filter(owner=obj).exists():
-            raise ValidationError("You cannot delete a user that is a tenant owner.")
+            raise ValidationError(
+                message="You cannot delete a user that is a tenant owner."
+            )
 
         # Before deleting the user, we must manually clean up any ForeignKeys
         # from tenant-specific models that point to this user.
@@ -98,9 +103,9 @@ class UserAdmin(admin.ModelAdmin):
             with schema_context(tenant.schema_name):
                 try:
                     # Nullify the 'owner' field for Projects and 'assignee' for Tasks
-                    if table_exists(Project._meta.db_table):
+                    if table_exists(table_name=Project._meta.db_table):
                         Project.objects.filter(owner=obj).update(owner=None)
-                    if table_exists(Task._meta.db_table):
+                    if table_exists(table_name=Task._meta.db_table):
                         Task.objects.filter(assignee=obj).update(assignee=None)
                 except ProgrammingError:
                     # This can happen if the tables don't exist in a particular
@@ -110,11 +115,15 @@ class UserAdmin(admin.ModelAdmin):
 
         # Temporarily disable on_delete behavior for tenant-specific models
         # to prevent Django from trying to update non-existent tables in public schema.
-        project_owner_field = cast(models.ForeignKey, Project._meta.get_field("owner"))
-        task_assignee_field = cast(models.ForeignKey, Task._meta.get_field("assignee"))
+        project_owner_field: models.ForeignKey[Any] = cast(
+            models.ForeignKey, Project._meta.get_field(field_name="owner")
+        )
+        task_assignee_field: models.ForeignKey[Any] = cast(
+            models.ForeignKey, Task._meta.get_field(field_name="assignee")
+        )
 
-        original_project_on_delete = project_owner_field.on_delete  # type: ignore
-        original_task_on_delete = task_assignee_field.on_delete  # type: ignore
+        original_project_on_delete: Any = project_owner_field.on_delete  # type: ignore
+        original_task_on_delete: Any = task_assignee_field.on_delete  # type: ignore
 
         try:
             # Tell the collector to do nothing for these relationships.
@@ -133,9 +142,9 @@ class UserAdmin(admin.ModelAdmin):
 class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
     """Admin class for the Tenant model."""
 
-    list_display = ["id", "name", "schema_name", "created_at"]
-    list_display_links = ["id", "name"]
-    search_fields = ["name", "schema_name"]
+    list_display: list[str] = ["id", "name", "schema_name", "created_at"]
+    list_display_links: list[str] = ["id", "name"]
+    search_fields: list[str] = ["name", "schema_name"]
 
     def delete_model(self, request, obj) -> None:
         # Force delete the tenant
@@ -146,6 +155,6 @@ class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
 class DomainAdmin(admin.ModelAdmin):
     """Admin class for the Domain model."""
 
-    list_display = ["id", "domain", "tenant", "is_primary"]
-    list_display_links = ["id", "domain"]
-    search_fields = ["domain"]
+    list_display: list[str] = ["id", "domain", "tenant", "is_primary"]
+    list_display_links: list[str] = ["id", "domain"]
+    search_fields: list[str] = ["domain"]

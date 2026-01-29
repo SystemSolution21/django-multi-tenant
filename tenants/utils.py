@@ -73,7 +73,7 @@ def delete_tenant(tenant: Tenant) -> None:
     Delete a tenant and its associated schema.
     WARNING: This will permanently delete all tenant data.
     """
-    tenant.delete(force_drop=True)
+    tenant.delete_tenant()
 
 
 def add_user_to_tenant(

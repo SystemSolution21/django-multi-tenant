@@ -118,10 +118,10 @@ class TenantDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return self.request.user.is_superuser
 
     def delete(self, request, *args, **kwargs) -> HttpResponseRedirect:
-        self.object = cast(Tenant, self.get_object())
-        success_url = self.get_success_url()
-        delete_tenant(self.object)
-        return HttpResponseRedirect(success_url)
+        tenant: Tenant = cast(Tenant, self.get_object())
+        success_url: str = self.get_success_url()
+        delete_tenant(tenant=tenant)
+        return HttpResponseRedirect(redirect_to=success_url)
 
 
 class TenantSelfUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):

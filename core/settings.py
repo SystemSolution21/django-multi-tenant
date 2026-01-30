@@ -40,6 +40,8 @@ ALLOWED_HOSTS: list[str] = [
 # Application definition (public/shared apps only)
 SHARED_APPS = [
     "django_tenants",  # django-tenants
+    "crispy_forms",
+    "crispy_bootstrap5",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -76,7 +78,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "tenant_users.tenants.middleware.TenantAccessMiddleware",  # django-tenant-users
+    # "tenant_users.tenants.middleware.TenantAccessMiddleware",  # django-tenant-users
+    "core.middleware.PublicTenantAccessMiddleware",  # custom middleware
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -129,6 +132,10 @@ AUTH_USER_MODEL = "tenants.User"
 TENANT_MODEL = "tenants.Tenant"
 
 TENANT_DOMAIN_MODEL = "tenants.Domain"
+
+# Crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Django-tenant-users settings
 TENANT_USERS_DOMAIN = BASE_DOMAIN

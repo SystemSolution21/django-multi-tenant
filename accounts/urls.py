@@ -6,7 +6,7 @@ from django.urls import path
 from django.urls.resolvers import URLPattern
 
 # Import local modules
-from .views import SignUpView
+from .views import SignUpView, OnboardingView
 
 urlpatterns: list[URLPattern] = [
     path(
@@ -16,4 +16,5 @@ urlpatterns: list[URLPattern] = [
     ),
     path(route="logout/", view=auth_views.LogoutView.as_view(), name="logout"),
     path(route="signup/", view=SignUpView.as_view(), name="signup"),
+    path(route="onboarding/", view=OnboardingView.as_view(), name="onboarding"),
 ]

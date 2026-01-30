@@ -1,0 +1,27 @@
+<!-- templates/registration/onboarding.html -->
+{% extends "base.html" %} 
+{% load crispy_forms_tags %} 
+{% block title %}Welcome!{% endblock %} 
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow">
+        <div class="card-body">
+          <h2 class="text-center mb-4">Welcome Aboard!</h2>
+          <p class="text-center text-muted mb-4">
+            Let's get you started. What is the name of the first project you want to manage?
+          </p>
+          <form method="post">
+            {% csrf_token %} 
+            {{ form|crispy }}
+            <div class="d-grid gap-2 mt-4">
+              <button type="submit" class="btn btn-success btn-lg">Create Project & Start</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

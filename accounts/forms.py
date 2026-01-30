@@ -2,6 +2,7 @@
 
 # Import django libraries
 from django.contrib.auth.forms import UserCreationForm
+from django import forms
 
 # Import local modules
 from tenants.models import User
@@ -16,3 +17,15 @@ class CustomUserCreationForm(UserCreationForm):
         model = User
         fields = ("email", "first_name", "last_name")
         field_classes = {"email": UserCreationForm.Meta.field_classes["username"]}  # type: ignore
+
+
+class OnboardingForm(forms.Form):
+    """
+    Form for the onboarding step to create the first project.
+    """
+
+    project_name = forms.CharField(
+        max_length=100,
+        label="Project Name",
+        help_text="Enter the name of your first project.",
+    )

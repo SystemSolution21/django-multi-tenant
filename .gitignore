@@ -13,3 +13,5 @@ media/
 staticfiles
 
 .DS_Store
+
+notes.txt

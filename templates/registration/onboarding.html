@@ -10,13 +10,13 @@
         <div class="card-body">
           <h2 class="text-center mb-4">Welcome Aboard!</h2>
           <p class="text-center text-muted mb-4">
-            Let's get you started. What is the name of the first project you want to manage?
+            Let's get you started. Create your workspace and first project.
           </p>
           <form method="post">
             {% csrf_token %} 
             {{ form|crispy }}
             <div class="d-grid gap-2 mt-4">
-              <button type="submit" class="btn btn-success btn-lg">Create Project & Start</button>
+              <button type="submit" class="btn btn-success btn-lg">Create Workspace & Start</button>
             </div>
           </form>
         </div>

@@ -1,19 +1,24 @@
 # accounts/views.py
 
-# Import python libraries
+# Import standard libraries
 from typing import Any, Callable, LiteralString, cast
 
 # Import django libraries
+from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import connection
+from django.db import connection, transaction
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.utils.text import slugify
 from django.views.generic import CreateView, FormView
+from django_tenants.utils import schema_context
 
 # Import local modules
 from .forms import CustomUserCreationForm, OnboardingForm
 from tenants.models import Tenant, User
+from tenants.utils import create_tenant
 
 
 class SignUpView(CreateView):
@@ -26,17 +31,19 @@ class SignUpView(CreateView):
     template_name = "registration/signup.html"
 
     def form_valid(self, form) -> HttpResponse:
-        response: HttpResponse = super().form_valid(form=form)
-        tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
-        user: User = cast(User, self.object)  # type: ignore[assignment]
-        tenant.add_user(user_obj=user)
+        with transaction.atomic():
+            response: HttpResponse = super().form_valid(form=form)
+            tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
+            user: User = cast(User, self.object)  # type: ignore[assignment]
+            # This line is critical: it links the new user to the current (public) tenant
+            tenant.add_user(user_obj=user)
 
-        # Automatically log the user in after signup
-        login(
-            request=self.request,
-            user=user,
-            backend="tenant_users.permissions.backend.UserBackend",
-        )
+            # Automatically log the user in after signup
+            login(
+                request=self.request,
+                user=user,
+                backend="tenant_users.permissions.backend.UserBackend",
+            )
         return response
 
 
@@ -53,19 +60,43 @@ class OnboardingView(LoginRequiredMixin, FormView):
         # Import Project here to avoid issues if tasks app is not loaded in shared context
         from tasks.models import Project
 
+        company_name: str = form.cleaned_data["company_name"]
         project_name: Any = form.cleaned_data["project_name"]
 
+        # Generate schema_name from company name (e.g., "My Company" -> "mycompany")
+        schema_name = slugify(company_name).replace("-", "")
+        if not schema_name:
+            schema_name = f"tenant{self.request.user.pk}"
+
+        # Create the Tenant
+        user = self.request.user
+        tenant_data = {
+            "name": company_name,
+            "schema_name": schema_name,
+            "subdomain": schema_name,
+            "email": user.email,
+            "password": "temp_password",  # User already exists, this is a placeholder
+            "root_user": user,
+        }
+        create_tenant(tenant_data=tenant_data)
+
         # Generate a simple key from the name (e.g., "My Project" -> "MYP")
-        # Ensure key is at least 2 chars, max 10
         key: LiteralString = "".join([c for c in project_name if c.isalnum()])[
             :3
         ].upper()
         if len(key) < 2:
             key = "PRJ"
 
-        # Create the project
-        Project.objects.create(
-            name=project_name, key=key, description="Created during onboarding"
-        )
+        # Switch to the new tenant context to create the project
+        with schema_context(schema_name):
+            Project.objects.create(
+                name=project_name, key=key, description="Created during onboarding"
+            )
 
-        return super().form_valid(form=form)
+        # Redirect to the new tenant's domain
+        port = self.request.get_port()
+        domain = f"{schema_name}.{settings.BASE_DOMAIN}"
+        if port not in ["80", "443"]:
+            domain = f"{domain}:{port}"
+
+        return redirect(f"http://{domain}/")

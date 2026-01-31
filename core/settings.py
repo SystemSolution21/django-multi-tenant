@@ -14,7 +14,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 # Import standard libraries
 import os
 from pathlib import Path
-from typing import Any
 
 # Import django libraries and modules
 from django.contrib.messages import constants as messages
@@ -23,7 +22,7 @@ from django.contrib.messages import constants as messages
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR: Path = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables from .env file
 load_dotenv(dotenv_path=BASE_DIR / ".env")
@@ -32,18 +31,18 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY: str | None = os.getenv(key="SECRET_KEY", default="your-secret-key")
+SECRET_KEY = os.getenv(key="SECRET_KEY", default="your-secret-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG: bool = os.getenv(key="DEBUG", default="True") == "True"
+DEBUG = os.getenv(key="DEBUG", default="True") == "True"
 
-ALLOWED_HOSTS: list[str] = [
+ALLOWED_HOSTS = [
     host.strip("\"[]'")
     for host in os.getenv(key="ALLOWED_HOSTS", default="*").split(",")
 ]
 
 # Application definition (public/shared apps only)
-SHARED_APPS: list[str] = [
+SHARED_APPS = [
     "django_tenants",  # django-tenants
     "crispy_forms",
     "crispy_bootstrap5",
@@ -63,7 +62,7 @@ SHARED_APPS: list[str] = [
 ]
 
 # Application definition (tenant apps only)
-TENANT_APPS: list[str] = [
+TENANT_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "tenant_users.permissions",  # django-tenant-users
@@ -71,12 +70,12 @@ TENANT_APPS: list[str] = [
 ]
 
 # Application definition (public/shared apps and tenant apps)
-INSTALLED_APPS: list[str] = list(SHARED_APPS) + [
+INSTALLED_APPS = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS
 ]
 
 # Middleware
-MIDDLEWARE: list[str] = [
+MIDDLEWARE = [
     "django_tenants.middleware.main.TenantMainMiddleware",  # django-tenants
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # whitenoise for static files in production
@@ -91,7 +90,7 @@ MIDDLEWARE: list[str] = [
 ]
 
 # Bootstrap 5 message tags
-MESSAGE_TAGS: dict[int, str] = {
+MESSAGE_TAGS = {
     messages.ERROR: "danger",
 }
 
@@ -100,7 +99,7 @@ ROOT_URLCONF = "core.urls"
 PUBLIC_SCHEMA_URLCONF = "core.urls_public"
 
 # Templates
-TEMPLATES: list[dict[str, Any]] = [
+TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [BASE_DIR / "templates"],
@@ -123,7 +122,7 @@ WSGI_APPLICATION = "core.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES: dict[str, dict[str, Any]] = {
+DATABASES = {
     "default": {
         "ENGINE": "django_tenants.postgresql_backend",
         "NAME": os.getenv(key="POSTGRES_DB"),
@@ -135,8 +134,14 @@ DATABASES: dict[str, dict[str, Any]] = {
 }
 
 # Django-tenants settings
-DATABASE_ROUTERS: list[str] = ["django_tenants.routers.TenantSyncRouter"]
+DATABASE_ROUTERS = ["django_tenants.routers.TenantSyncRouter"]
 
+# Allow session cookies to be shared across subdomains (e.g., demo1.localhost and localhost)
+# Note: This requires to access the site via 'localhost' or '.localhost', not '127.0.0.1'
+SESSION_COOKIE_DOMAIN = ".localhost"
+
+# Show public tenant (no other tenant found)
+SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
 BASE_DOMAIN = "localhost"
 
 PUBLIC_SCHEMA_NAME = "public"
@@ -154,14 +159,14 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 # Django-tenant-users settings
 TENANT_USERS_DOMAIN = BASE_DOMAIN
 
-AUTHENTICATION_BACKENDS: list[str] = [
+AUTHENTICATION_BACKENDS = [
     "tenant_users.permissions.backend.UserBackend",
 ]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS: list[dict[str, str]] = [
+AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
@@ -192,17 +197,17 @@ USE_TZ = True
 
 STATIC_URL = "static/"  # Static files for each root app
 
-STATICFILES_DIRS: list[Path] = [
+STATICFILES_DIRS = [
     BASE_DIR / "static"
 ]  # Static files directory globally accessible by all apps in the project while in development
 
-STATIC_ROOT: Path = (
+STATIC_ROOT = (
     BASE_DIR / "staticfiles"
 )  # All static files will be collected here for deployment
 
 # WhiteNoise configuration for production
 if not DEBUG:
-    STORAGES: dict[str, dict[str, str]] = {
+    STORAGES = {
         "default": {
             "BACKEND": "django.core.files.storage.FileSystemStorage",
         },
@@ -212,7 +217,7 @@ if not DEBUG:
     }
 
 # Media files (user uploaded files)
-MEDIA_ROOT: Path = BASE_DIR / "media"
+MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
 # Default primary key field type

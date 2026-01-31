@@ -21,5 +21,15 @@ class PublicTenantAccessMiddleware(TenantAccessMiddleware):
             # This bypasses the strict membership check in TenantAccessMiddleware.
             return None
 
+        # Allow access to specific paths on tenant domains for anonymous users
+        # or users who are not yet members (e.g. accepting invitations).
+        if (
+            request.path == "/"
+            or request.path.startswith("/accounts/")
+            or request.path.startswith("/tenants/invitations/")
+            or request.path.startswith("/admin/")
+        ):
+            return None
+
         # For other tenants, use the default behavior (enforce membership)
         return super().process_request(request)  # type: ignore[no-any-return]

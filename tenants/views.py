@@ -223,11 +223,15 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
                 tenant=current_tenant, email=form.instance.email, is_accepted=False
             ).first()
             if pending_invitation:
-                messages.error(
-                    request=self.request,
-                    message=f"An invitation has already been sent to {form.instance.email}.",
-                )
-                return self.form_invalid(form=form)
+                if pending_invitation.is_expired:
+                    # Automatically clean up expired invitation so we can send a new one
+                    pending_invitation.delete()
+                else:
+                    messages.error(
+                        request=self.request,
+                        message=f"An invitation has already been sent to {form.instance.email}.",
+                    )
+                    return self.form_invalid(form=form)
 
             # Delete any old accepted invitations to avoid unique constraint violation
             UserInvitation.objects.filter(
@@ -237,21 +241,20 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         response: HttpResponse = super().form_valid(form=form)
 
         # Send invitation email (self.object is now available)
-        # Use public domain for invitation URL so user can login there
+        # Use current tenant domain for invitation URL
 
         with schema_context("public"):
-            public_tenant: Tenant = Tenant.objects.get(schema_name="public")
-            public_domain: Domain | None = Domain.objects.filter(
-                tenant=public_tenant, is_primary=True
+            tenant_domain: Domain | None = Domain.objects.filter(
+                tenant=current_tenant, is_primary=True
             ).first()
 
-        if public_domain:
+        if tenant_domain:
             # Get the port from the current request
             port: str = self.request.get_port()
             domain_with_port: str = (
-                f"{public_domain.domain}:{port}"
+                f"{tenant_domain.domain}:{port}"
                 if port not in ["80", "443"]
-                else public_domain.domain
+                else tenant_domain.domain
             )
             invitation_url: str = f"http://{domain_with_port}/tenants/invitations/{self.object.token}/accept/"
         else:
@@ -315,7 +318,8 @@ class AcceptInvitationView(View):
 
             if request.user.email != invitation.email:
                 messages.error(
-                    request, "This invitation is for a different email address."
+                    request,
+                    f"You are logged in as {request.user.email}. This invitation is for {invitation.email}. Please log out and try again.",
                 )
                 return redirect("index")
 

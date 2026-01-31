@@ -24,6 +24,11 @@ class OnboardingForm(forms.Form):
     Form for the onboarding step to create the first project.
     """
 
+    company_name = forms.CharField(
+        max_length=100,
+        label="Workspace Name",
+        help_text="Enter the name of your company or workspace.",
+    )
     project_name = forms.CharField(
         max_length=100,
         label="Project Name",

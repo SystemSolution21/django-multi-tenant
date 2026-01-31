@@ -176,7 +176,7 @@ class TenantUserListView(TenantAdminRequiredMixin, ListView):
     def get_context_data(self, **kwargs) -> dict[str, Any]:
         context: dict[str, Any] = super().get_context_data(**kwargs)
         current_tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
-        # Query invitations from public schema (SHARED_APPS)
+        # Query invitations from public schema
         with schema_context("public"):
             context["pending_invitations"] = UserInvitation.objects.filter(
                 tenant=current_tenant, is_accepted=False
@@ -299,66 +299,90 @@ class AcceptInvitationView(View):
         )
 
     def post(self, request, token):
-        # Query invitation from public schema (SHARED_APPS)
+        if not request.user.is_authenticated:
+            messages.error(request, "Please log in to accept the invitation.")
+            return redirect(f"{reverse('login')}?next={request.path}")
+
+        # Perform all operations in public schema context
         with schema_context("public"):
             invitation: UserInvitation = get_object_or_404(
                 UserInvitation, token=token, is_accepted=False
             )
 
-        if invitation.is_expired:
-            messages.error(request, "This invitation has expired.")
-            return redirect("index")
+            if invitation.is_expired:
+                messages.error(request, "This invitation has expired.")
+                return redirect("index")
 
-        if not request.user.is_authenticated:
-            messages.error(request, "Please log in to accept the invitation.")
-            return redirect("/admin/login/")
+            if request.user.email != invitation.email:
+                messages.error(
+                    request, "This invitation is for a different email address."
+                )
+                return redirect("index")
 
-        if request.user.email != invitation.email:
-            messages.error(request, "This invitation is for a different email address.")
-            return redirect("index")
+            # Add user to tenant
+            invitation.tenant.add_user(
+                request.user,
+                is_superuser=(invitation.role == "admin"),
+                is_staff=(invitation.role in ["admin", "staff"]),
+            )
 
-        # Add user to tenant
-        invitation.tenant.add_user(
-            request.user,
-            is_superuser=(invitation.role == "admin"),
-            is_staff=(invitation.role in ["admin", "staff"]),
-        )
-
-        # Update user role (users are in public schema)
-        with schema_context("public"):
+            # Update user role
             user = User.objects.get(pk=request.user.pk)
             user.role = invitation.role
             if invitation.role == "admin":
                 user.is_tenant_admin = True
             user.save()
 
-            # Mark invitation as accepted (invitations are in public schema)
+            # Mark invitation as accepted
             invitation.is_accepted = True
             invitation.save()
 
+            # Get tenant domain for redirect
+            tenant_domain = Domain.objects.filter(
+                tenant=invitation.tenant, is_primary=True
+            ).first()
+
         messages.success(request, f"Welcome to {invitation.tenant.name}!")
 
-        # Redirect to tenant domain (query from public schema)
-        try:
-            from tenants.models import Domain
-
-            with schema_context("public"):
-                tenant_domain = Domain.objects.filter(
-                    tenant=invitation.tenant, is_primary=True
-                ).first()
-            if tenant_domain:
-                # Get the port from the current request
-                port = request.get_port()
-                domain_with_port = (
-                    f"{tenant_domain.domain}:{port}"
-                    if port not in ["80", "443"]
-                    else tenant_domain.domain
-                )
-                return redirect(f"http://{domain_with_port}/tenants/users/")
-        except Exception:
-            pass
+        if tenant_domain:
+            port = request.get_port()
+            domain_with_port = (
+                f"{tenant_domain.domain}:{port}"
+                if port not in ["80", "443"]
+                else tenant_domain.domain
+            )
+            return redirect(f"http://{domain_with_port}/tenants/users/")
 
         return redirect("index")
+
+
+class DeclineInvitationView(View):
+    """Decline user invitation"""
+
+    def get(self, request, token) -> HttpResponse:
+        # Query invitation from public schema
+        with schema_context("public"):
+            invitation: UserInvitation = get_object_or_404(
+                klass=UserInvitation, token=token, is_accepted=False
+            )
+
+        return render(
+            request=request,
+            template_name="tenants/decline_invitation.html",
+            context={
+                "invitation": invitation,
+            },
+        )
+
+    def post(self, request, token) -> HttpResponseRedirect:
+        with schema_context("public"):
+            invitation: UserInvitation = get_object_or_404(
+                klass=UserInvitation, token=token, is_accepted=False
+            )
+            invitation.delete()
+
+        messages.success(request=request, message="Invitation declined successfully.")
+        return redirect(to="index")
 
 
 class UserEditView(TenantAdminRequiredMixin, UpdateView):
@@ -381,22 +405,24 @@ class UserRemoveView(LoginRequiredMixin, View):
     Remove user from current tenant instead of deleting the user.
     """
 
-    template_name = "tenants/user_confirm_remove.html"
-    success_url = reverse_lazy("user_list")
+    template_name: str = "tenants/user_confirm_remove.html"
+    success_url: Any = reverse_lazy("user_list")
 
-    def get_object(self):
+    def get_object(self) -> User:
         """Get the user object from URL kwargs"""
-        return get_object_or_404(User, pk=self.kwargs["pk"])
+        return get_object_or_404(klass=User, pk=self.kwargs["pk"])
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs) -> HttpResponse:
         """Show confirmation page"""
-        user = self.get_object()
-        return render(request, self.template_name, {"object": user})
+        user: User = self.get_object()
+        return render(
+            request=request, template_name=self.template_name, context={"object": user}
+        )
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs) -> HttpResponseRedirect:
         """Remove user from current tenant instead of deleting the user."""
-        user = cast(User, self.get_object())
-        tenant = Tenant.objects.get(schema_name=connection.schema_name)
+        user: User = cast(User, self.get_object())
+        tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
 
         # Remove user from tenant (keeps user account intact)
         tenant.remove_user(user_obj=user)
@@ -406,10 +432,11 @@ class UserRemoveView(LoginRequiredMixin, View):
             UserInvitation.objects.filter(tenant=tenant, email=user.email).delete()
 
         messages.success(
-            request, f"User {user.email} has been removed from {tenant.name}"
+            request=request,
+            message=f"User {user.email} has been removed from {tenant.name}",
         )
 
-        return HttpResponseRedirect(self.success_url)
+        return HttpResponseRedirect(redirect_to=self.success_url)
 
 
 class TenantSearchJSONView(LoginRequiredMixin, View):
@@ -448,7 +475,7 @@ class TenantSearchJSONView(LoginRequiredMixin, View):
                     }
                 )
 
-        return JsonResponse({"results": results})
+        return JsonResponse(data={"results": results})
 
 
 class PublicBlogSearchView(View):

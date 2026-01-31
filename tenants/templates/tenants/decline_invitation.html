@@ -1,0 +1,29 @@
+<!-- tenants/templates/tenants/decline_invitation.html -->
+{% extends "base.html" %}
+{% block title %}Decline Invitation{% endblock %}
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-body text-center">
+          <h2 class="mb-4">Decline Invitation</h2>
+          <p>
+            Are you sure you want to decline the invitation to join
+            <strong>{{ invitation.tenant.name }}</strong>?
+          </p>
+          <form method="post">
+            {% csrf_token %}
+            <div class="d-grid gap-2 d-md-block">
+              <button type="submit" class="btn btn-danger">
+                Decline Invitation
+              </button>
+              <a href="{% url 'index' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

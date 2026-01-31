@@ -11,14 +11,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+# Import standard libraries
 import os
 from pathlib import Path
+from typing import Any
 
+# Import django libraries and modules
+from django.contrib.messages import constants as messages
+
+# Import third-party libraries and modules
 from dotenv import load_dotenv
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR: Path = Path(__file__).resolve().parent.parent
 
 # Load environment variables from .env file
 load_dotenv(dotenv_path=BASE_DIR / ".env")
@@ -38,7 +43,7 @@ ALLOWED_HOSTS: list[str] = [
 ]
 
 # Application definition (public/shared apps only)
-SHARED_APPS = [
+SHARED_APPS: list[str] = [
     "django_tenants",  # django-tenants
     "crispy_forms",
     "crispy_bootstrap5",
@@ -58,7 +63,7 @@ SHARED_APPS = [
 ]
 
 # Application definition (tenant apps only)
-TENANT_APPS = [
+TENANT_APPS: list[str] = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "tenant_users.permissions",  # django-tenant-users
@@ -66,11 +71,12 @@ TENANT_APPS = [
 ]
 
 # Application definition (public/shared apps and tenant apps)
-INSTALLED_APPS = list(SHARED_APPS) + [
+INSTALLED_APPS: list[str] = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS
 ]
 
-MIDDLEWARE = [
+# Middleware
+MIDDLEWARE: list[str] = [
     "django_tenants.middleware.main.TenantMainMiddleware",  # django-tenants
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # whitenoise for static files in production
@@ -84,10 +90,17 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Bootstrap 5 message tags
+MESSAGE_TAGS: dict[int, str] = {
+    messages.ERROR: "danger",
+}
+
+# URLs
 ROOT_URLCONF = "core.urls"
 PUBLIC_SCHEMA_URLCONF = "core.urls_public"
 
-TEMPLATES = [
+# Templates
+TEMPLATES: list[dict[str, Any]] = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [BASE_DIR / "templates"],
@@ -104,12 +117,13 @@ TEMPLATES = [
     },
 ]
 
+# WSGI application
 WSGI_APPLICATION = "core.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
+DATABASES: dict[str, dict[str, Any]] = {
     "default": {
         "ENGINE": "django_tenants.postgresql_backend",
         "NAME": os.getenv(key="POSTGRES_DB"),
@@ -121,7 +135,7 @@ DATABASES = {
 }
 
 # Django-tenants settings
-DATABASE_ROUTERS = ["django_tenants.routers.TenantSyncRouter"]
+DATABASE_ROUTERS: list[str] = ["django_tenants.routers.TenantSyncRouter"]
 
 BASE_DOMAIN = "localhost"
 
@@ -140,14 +154,14 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 # Django-tenant-users settings
 TENANT_USERS_DOMAIN = BASE_DOMAIN
 
-AUTHENTICATION_BACKENDS = [
+AUTHENTICATION_BACKENDS: list[str] = [
     "tenant_users.permissions.backend.UserBackend",
 ]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
+AUTH_PASSWORD_VALIDATORS: list[dict[str, str]] = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
@@ -188,7 +202,7 @@ STATIC_ROOT: Path = (
 
 # WhiteNoise configuration for production
 if not DEBUG:
-    STORAGES = {
+    STORAGES: dict[str, dict[str, str]] = {
         "default": {
             "BACKEND": "django.core.files.storage.FileSystemStorage",
         },

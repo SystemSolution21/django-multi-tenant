@@ -23,3 +23,28 @@ GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO django_multi_tenant_us
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO django_multi_tenant_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO django_multi_tenant_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO django_multi_tenant_user;
+
+=========================================================================================================
+
+-- Delete all data related to a specific user
+DROP SCHEMA IF EXISTS testusercompany CASCADE;
+
+DELETE FROM tenants_domain WHERE tenant_id IN (
+    SELECT id FROM tenants_tenant WHERE owner_id = (
+        SELECT id FROM tenants_user WHERE email = 'testuser@example.com'
+        )
+    );
+
+DELETE FROM tenants_tenant WHERE owner_id = (
+    SELECT id FROM tenants_user WHERE email = 'testuser@example.com'
+    );
+
+DELETE FROM tenants_user_tenants WHERE user_id = (
+    SELECT id FROM tenants_user WHERE email = 'testuser@example.com'
+    );
+
+DELETE FROM permissions_usertenantpermissions WHERE profile_id = (
+    SELECT id FROM tenants_user WHERE email = 'testuser@example.com'
+    );
+
+DELETE FROM tenants_user WHERE email = 'testuser@example.com';

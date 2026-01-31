@@ -43,6 +43,7 @@ class UserAdmin(admin.ModelAdmin):
     list_display_links: list[str] = ["id", "email"]
     search_fields: list[str] = ["email", "first_name", "last_name"]
     list_filter: list[str] = ["role", "is_tenant_admin", "is_active"]
+    readonly_fields = ["is_staff", "is_superuser"]
     fieldsets = [
         (
             None,
@@ -71,6 +72,8 @@ class UserAdmin(admin.ModelAdmin):
                     "is_tenant_admin",
                     "is_active",
                     "is_verified",
+                    "is_staff",
+                    "is_superuser",
                 ],
             },
         ),

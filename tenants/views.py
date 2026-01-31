@@ -31,7 +31,7 @@ from rest_framework.permissions import IsAuthenticated
 from tenants.mixins import TenantAdminRequiredMixin
 from tenants.models import Domain, Tenant, User, UserInvitation
 from tenants.serializers import TenantSerializer
-from tenants.utils import create_tenant, delete_tenant
+from tenants.utils import create_tenant
 from blog.models import Article
 from tasks.models import Project, Task
 
@@ -117,10 +117,9 @@ class TenantDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     def test_func(self) -> bool:
         return self.request.user.is_superuser
 
-    def delete(self, request, *args, **kwargs) -> HttpResponseRedirect:
-        tenant: Tenant = cast(Tenant, self.get_object())
+    def form_valid(self, form) -> HttpResponseRedirect:
         success_url: str = self.get_success_url()
-        delete_tenant(tenant=tenant)
+        self.object.delete(force_drop=True)
         return HttpResponseRedirect(redirect_to=success_url)
 
 

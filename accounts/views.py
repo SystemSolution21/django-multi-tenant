@@ -63,35 +63,44 @@ class OnboardingView(LoginRequiredMixin, FormView):
         company_name: str = form.cleaned_data["company_name"]
         project_name: Any = form.cleaned_data["project_name"]
 
-        # Generate schema_name from company name (e.g., "My Company" -> "mycompany")
-        schema_name = slugify(company_name).replace("-", "")
-        if not schema_name:
-            schema_name = f"tenant{self.request.user.pk}"
+        user = cast(User, self.request.user)
 
-        # Create the Tenant
-        user = self.request.user
-        tenant_data = {
-            "name": company_name,
-            "schema_name": schema_name,
-            "subdomain": schema_name,
-            "email": user.email,
-            "password": "temp_password",  # User already exists, this is a placeholder
-            "root_user": user,
-        }
-        create_tenant(tenant_data=tenant_data)
+        with transaction.atomic():
+            # Generate schema_name from company name (e.g., "My Company" -> "mycompany")
+            schema_name = slugify(company_name).replace("-", "")
+            if not schema_name:
+                schema_name = f"tenant{user.pk}"
 
-        # Generate a simple key from the name (e.g., "My Project" -> "MYP")
-        key: LiteralString = "".join([c for c in project_name if c.isalnum()])[
-            :3
-        ].upper()
-        if len(key) < 2:
-            key = "PRJ"
+            # Create the Tenant
+            tenant_data = {
+                "name": company_name,
+                "schema_name": schema_name,
+                "subdomain": schema_name,
+                "email": user.email,
+                "password": "temp_password",  # User already exists, this is a placeholder
+                "root_user": user,
+            }
+            create_tenant(tenant_data=tenant_data)
 
-        # Switch to the new tenant context to create the project
-        with schema_context(schema_name):
-            Project.objects.create(
-                name=project_name, key=key, description="Created during onboarding"
-            )
+            # Refresh user to ensure we have the latest flags (like is_staff) set by create_tenant
+            user.refresh_from_db()
+            # Explicitly set the owner as Admin in our custom fields
+            user.role = "admin"
+            user.is_tenant_admin = True
+            user.save()
+
+            # Generate a simple key from the name (e.g., "My Project" -> "MYP")
+            key: LiteralString = "".join([c for c in project_name if c.isalnum()])[
+                :3
+            ].upper()
+            if len(key) < 2:
+                key = "PRJ"
+
+            # Switch to the new tenant context to create the project
+            with schema_context(schema_name):
+                Project.objects.create(
+                    name=project_name, key=key, description="Created during onboarding"
+                )
 
         # Redirect to the new tenant's domain
         port = self.request.get_port()

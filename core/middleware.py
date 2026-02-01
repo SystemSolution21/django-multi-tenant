@@ -14,12 +14,10 @@ class PublicTenantAccessMiddleware(TenantAccessMiddleware):
     without being members of it.
     """
 
-    def process_request(self, request):
+    def has_tenant_access(self, request):
         # Check if the current schema is the public schema
         if connection.schema_name == settings.PUBLIC_SCHEMA_NAME:
-            # Allow access to public schema for all users (authenticated or not).
-            # This bypasses the strict membership check in TenantAccessMiddleware.
-            return None
+            return True
 
         # Allow access to specific paths on tenant domains for anonymous users
         # or users who are not yet members (e.g. accepting invitations).
@@ -29,7 +27,12 @@ class PublicTenantAccessMiddleware(TenantAccessMiddleware):
             or request.path.startswith("/tenants/invitations/")
             or request.path.startswith("/admin/")
         ):
-            return None
+            return True
+
+        # Safety check: If request.tenant is not set (e.g. public schema or error),
+        # we cannot check tenant membership, so we deny access or handle gracefully.
+        if not hasattr(request, "tenant"):
+            return False
 
         # For other tenants, use the default behavior (enforce membership)
-        return super().process_request(request)  # type: ignore[no-any-return]
+        return super().has_tenant_access(request)

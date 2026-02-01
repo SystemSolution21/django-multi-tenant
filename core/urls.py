@@ -27,10 +27,10 @@ router.register(prefix="tenants", viewset=TenantViewSet)
 # Register URLs
 urlpatterns: list[Any] = [
     path(route="", view=index_view, name="index"),
-    path(route="api/", view=include(arg=router.urls)),
-    path(route="tenants/", view=include(arg="tenants.urls")),  # Tenants web UI
-    path(route="blog/", view=include(arg="blog.urls")),  # Blog web UI
-    path(route="accounts/", view=include(arg="accounts.urls")),  # Auth URLs
-    path(route="", view=include(arg="tasks.urls")),  # Tasks web UI
+    path(route="api/", view=include(router.urls)),
+    path(route="tenants/", view=include("tenants.urls")),  # Tenants web UI
+    path(route="blog/", view=include("blog.urls")),  # Blog web UI
+    path(route="accounts/", view=include("accounts.urls")),  # Auth URLs
+    path(route="", view=include("tasks.urls")),  # Tasks web UI
     path(route="admin/", view=admin.site.urls),
 ]

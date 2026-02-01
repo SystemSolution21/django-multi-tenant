@@ -1,19 +1,21 @@
+<!-- blog/templates/blog/article_list.html -->
 {% extends "base.html" %}
-
 {% block title %}Blog Articles - {{ block.super }}{% endblock %}
-
 {% block content %}
+  <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Blog Articles</h1>
     {% if user.is_authenticated %}
       {% if user.role == "admin" %}
-        <a href="{% url 'article_create' %}" class="btn btn-primary">
-          <i class="bi bi-plus-circle"></i> New Article
-        </a>
+        {% if user.is_superuser %}
+          <a href="{% url 'article_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Article
+          </a>
+        {% endif %}
       {% endif %}
     {% endif %}
   </div>
-
+  <!-- Articles -->
   {% if articles %}
     <div class="row">
       {% for article in articles %}
@@ -42,12 +44,14 @@
                 </a>
                 {% if user.is_authenticated %}
                   {% if user.role == "admin" %}
-                    <a href="{% url 'article_update' article.pk %}" class="btn btn-sm btn-outline-secondary">
-                      Edit
-                    </a>
-                    <a href="{% url 'article_delete' article.pk %}" class="btn btn-sm btn-outline-danger">
-                      Delete
-                    </a>
+                    {% if user.is_superuser %}
+                      <a href="{% url 'article_update' article.pk %}" class="btn btn-sm btn-outline-secondary">
+                        Edit
+                      </a>
+                      <a href="{% url 'article_delete' article.pk %}" class="btn btn-sm btn-outline-danger">
+                        Delete
+                      </a>
+                    {% endif %}
                   {% endif %}
                 {% endif %}
               </div>
@@ -56,7 +60,6 @@
         </div>
       {% endfor %}
     </div>
-
     <!-- Pagination -->
     {% if is_paginated %}
     <nav aria-label="Page navigation">
@@ -69,13 +72,11 @@
           <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
         </li>
         {% endif %}
-
         <li class="page-item active">
           <span class="page-link">
             Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
           </span>
         </li>
-
         {% if page_obj.has_next %}
         <li class="page-item">
           <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
@@ -87,16 +88,19 @@
       </ul>
     </nav>
     {% endif %}
+  <!-- No articles -->
   {% else %}
     <div class="alert alert-info">
       <h4 class="alert-heading">No Articles Yet</h4>
       <p>There are no blog articles available at the moment.</p>
-      {% if user.is_authenticated %}
       <hr>
+      {% if user.is_authenticated %}
         <p class="mb-0">
           <a href="{% url 'article_create' %}" class="btn btn-primary">Create First Article</a>
         </p>
       {% endif %}
     </div>
   {% endif %}
+  <!-- Back to home button -->
+  <a href="{% url 'index' %}" class="btn btn-secondary">Back to Home</a>
 {% endblock %}

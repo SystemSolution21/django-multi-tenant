@@ -1,9 +1,9 @@
+<!-- blog/templates/blog/article_form.html -->
 {% extends "base.html" %}
-
 {% block title %}
   {% if object %}Edit Article{% else %}New Article{% endif %} - {{ block.super }}
 {% endblock %}
-
+<!-- Create blog article form -->
 {% block content %}
 <div class="mb-4">
   <nav aria-label="breadcrumb">
@@ -15,7 +15,6 @@
     </ol>
   </nav>
 </div>
-
 <div class="row">
   <div class="col-md-8">
     <div class="card">
@@ -30,14 +29,12 @@
       </div>
       <div class="card-body">
         <form method="post">
-          {% csrf_token %}
-          
+          {% csrf_token %}          
           {% if form.non_field_errors %}
           <div class="alert alert-danger">
             {{ form.non_field_errors }}
           </div>
           {% endif %}
-
           <div class="mb-3">
             <label for="{{ form.title.id_for_label }}" class="form-label">
               Title <span class="text-danger">*</span>
@@ -59,7 +56,6 @@
             <div class="form-text">{{ form.title.help_text }}</div>
             {% endif %}
           </div>
-
           <div class="mb-3">
             <label for="{{ form.content.id_for_label }}" class="form-label">
               Content <span class="text-danger">*</span>
@@ -80,7 +76,6 @@
             <div class="form-text">{{ form.content.help_text }}</div>
             {% endif %}
           </div>
-
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">
               {% if object %}
@@ -97,7 +92,6 @@
       </div>
     </div>
   </div>
-
   <div class="col-md-4">
     <div class="card">
       <div class="card-header">

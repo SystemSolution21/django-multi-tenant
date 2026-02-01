@@ -17,12 +17,15 @@
         <h1 class="display-4">Welcome to SaaS Platform</h1>
         <p class="lead">Multi-tenant application with Django, django-tenants and django-tenant-users.</p>
         <hr class="my-4">
-        <p>This is the public homepage. Access your tenant via subdomain.</p>
         <!-- manage tenants -->
         {% if user.is_authenticated and user.is_superuser %}
-            <a class="btn btn-primary btn-lg" href="{% url 'tenant_list' %}" role="button">
-                Manage Tenants
-            </a>
+          <p>This is the public homepage. Access your tenant via subdomain and Administration site.</p>
+          <a class="btn btn-primary btn-lg" href="{% url 'tenant_list' %}" role="button">
+              Manage Tenants
+          </a>
+          <a class="btn btn-secondary btn-lg" href="/admin/" role="button">
+              SaaS Administration
+          </a>
         {% endif %}
       </div>
       <!-- public stats -->
@@ -76,7 +79,7 @@
       {% if user.is_staff %}
         <div class="mt-4">
           <h3>Admin Actions</h3>
-          <a href="/admin/" class="btn btn-secondary">Django Admin</a>
+          <a href="/admin/" class="btn btn-secondary">SaaS Administration</a>
         </div>
       {% endif %}
     {% endif %}

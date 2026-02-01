@@ -32,12 +32,14 @@
         </a>
         {% if user.is_authenticated %}
           {% if user.role == "admin" %}
-            <a href="{% url 'article_update' article.pk %}" class="btn btn-outline-primary">
-              <i class="bi bi-pencil"></i> Edit
-            </a>
-            <a href="{% url 'article_delete' article.pk %}" class="btn btn-outline-danger">
-              <i class="bi bi-trash"></i> Delete
-            </a>
+            {% if user.is_superuser %}
+              <a href="{% url 'article_update' article.pk %}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil"></i> Edit
+              </a>
+              <a href="{% url 'article_delete' article.pk %}" class="btn btn-outline-danger">
+                <i class="bi bi-trash"></i> Delete
+              </a>
+            {% endif %}
           {% endif %}
         {% endif %}
       </div>

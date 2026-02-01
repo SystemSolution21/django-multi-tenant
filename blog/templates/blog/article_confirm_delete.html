@@ -1,7 +1,6 @@
+<!-- blog/templates/blog/article_confirm_delete.html -->
 {% extends "base.html" %}
-
 {% block title %}Delete Article - {{ block.super }}{% endblock %}
-
 {% block content %}
 <div class="mb-4">
   <nav aria-label="breadcrumb">
@@ -12,7 +11,6 @@
     </ol>
   </nav>
 </div>
-
 <div class="row justify-content-center">
   <div class="col-md-8">
     <div class="card border-danger">
@@ -28,25 +26,19 @@
           </h5>
           <p>You are about to delete this article. This action cannot be undone.</p>
         </div>
-
         <h5>Article Details:</h5>
         <dl class="row">
           <dt class="col-sm-3">Title:</dt>
           <dd class="col-sm-9">{{ article.title }}</dd>
-
           <dt class="col-sm-3">Created:</dt>
           <dd class="col-sm-9">{{ article.created_at|date:"F d, Y \a\t g:i A" }}</dd>
-
           <dt class="col-sm-3">Last Updated:</dt>
           <dd class="col-sm-9">{{ article.updated_at|date:"F d, Y \a\t g:i A" }}</dd>
-
           <dt class="col-sm-3">Content Preview:</dt>
           <dd class="col-sm-9">{{ article.content|truncatewords:30 }}</dd>
         </dl>
-
         <form method="post" class="mt-4">
           {% csrf_token %}
-          
           <div class="form-check mb-3">
             <input 
               class="form-check-input" 
@@ -58,7 +50,6 @@
               I understand that this action is permanent and cannot be undone
             </label>
           </div>
-
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-danger">
               <i class="bi bi-trash"></i> Yes, Delete Article

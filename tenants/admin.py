@@ -4,6 +4,7 @@
 from typing import Any, Literal, cast
 
 # Import django libraries
+from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.db import ProgrammingError, connection, models
@@ -35,15 +36,47 @@ def table_exists(table_name) -> Any | Literal[False]:
         return result[0] if result else False
 
 
+class UserAdminForm(forms.ModelForm):
+    is_staff = forms.BooleanField(
+        label="Is staff",
+        required=False,
+        help_text="Designates whether the user can log into this admin site.",
+    )
+    is_superuser = forms.BooleanField(
+        label="Is superuser",
+        required=False,
+        help_text="Designates that this user has all permissions without explicitly assigning them.",
+    )
+
+    class Meta:
+        model = User
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["is_staff"].initial = self.instance.is_staff
+            self.fields["is_superuser"].initial = self.instance.is_superuser
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.is_staff = self.cleaned_data["is_staff"]
+        user.is_superuser = self.cleaned_data["is_superuser"]
+        if commit:
+            user.save()
+        return user
+
+
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     """Admin class for the User model."""
+
+    form = UserAdminForm
 
     list_display: list[str] = ["id", "email", "role", "is_tenant_admin", "is_active"]
     list_display_links: list[str] = ["id", "email"]
     search_fields: list[str] = ["email", "first_name", "last_name"]
     list_filter: list[str] = ["role", "is_tenant_admin", "is_active"]
-    readonly_fields = ["is_staff", "is_superuser"]
     fieldsets = [
         (
             None,
@@ -86,6 +119,11 @@ class UserAdmin(admin.ModelAdmin):
             },
         ),
     ]
+
+    def get_readonly_fields(self, request, obj=None) -> list[str]:
+        if request.user.is_superuser:
+            return []
+        return ["is_staff", "is_superuser"]
 
     def delete_model(self, request, obj: User) -> None:
         # Cancel the delete if the user owns any tenant

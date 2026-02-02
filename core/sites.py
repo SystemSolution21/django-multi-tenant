@@ -1,3 +1,6 @@
+# core/sites.py
+
+# Import django libraries
 from django.contrib import admin
 from django.http import HttpRequest
 

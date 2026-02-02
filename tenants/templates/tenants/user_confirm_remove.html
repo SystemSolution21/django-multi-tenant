@@ -1,56 +1,53 @@
+<!-- tenants/templates/tenants/user_confirm_remove.html -->
 {% extends "base.html" %}
-
 {% block title %}Remove User - {{ object.full_name }}{% endblock %}
-
 {% block content %}
 <div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0">Remove User from Tenant</h4>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                        <strong>Warning:</strong> This action cannot be undone.
-                    </div>
-                    
-                    <p>Are you sure you want to remove <strong>{{ object.full_name }}</strong> ({{ object.email }}) from <strong>{{ request.tenant.name }}</strong>?</p>
-                    
-                    <div class="mb-3">
-                        <h6>User Details:</h6>
-                        <ul class="list-unstyled">
-                            <li><strong>Name:</strong> {{ object.full_name }}</li>
-                            <li><strong>Email:</strong> {{ object.email }}</li>
-                            <li><strong>Role:</strong> {{ object.get_role_display }}</li>
-                            <li><strong>Tenant Admin:</strong> 
-                                {% if object.is_tenant_admin %}
-                                    <span class="badge bg-danger">Yes</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">No</span>
-                                {% endif %}
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <p class="text-muted">
-                        <small>
-                            <strong>Note:</strong> The user account will not be deleted, only their access to this tenant will be removed. 
-                            They can be re-invited later if needed.
-                        </small>
-                    </p>
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-danger">Remove User</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+          <h4 class="mb-0">Remove User from Tenant</h4>
         </div>
+        <div class="card-body">
+          <div class="alert alert-warning" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <strong>Warning:</strong> This action cannot be undone.
+          </div>
+          <p>Are you sure you want to remove <strong>{{ object.full_name }}</strong> ({{ object.email }}) from
+            <strong>{{ request.tenant.name }}</strong>?</p>
+          <div class="mb-3">
+            <h6>User Details:</h6>
+            <ul class="list-unstyled">
+              <li><strong>Name:</strong> {{ object.full_name }}</li>
+              <li><strong>Email:</strong> {{ object.email }}</li>
+              <li><strong>Role:</strong> {{ object.get_role_display }}</li>
+              <li><strong>Tenant Admin:</strong>
+                {% if object.is_tenant_admin %}
+                  <span class="badge bg-danger">Yes</span>
+                {% else %}
+                  <span class="badge bg-secondary">No</span>
+                {% endif %}
+              </li>
+            </ul>
+          </div>
+          <p class="text-muted">
+            <small>
+              <strong>Note:</strong> The user account will not be deleted, only their access to this tenant will be
+              removed.
+              They can be re-invited later if needed.
+            </small>
+          </p>
+          <form method="post">
+            {% csrf_token %}
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+              <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-danger">Remove User</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

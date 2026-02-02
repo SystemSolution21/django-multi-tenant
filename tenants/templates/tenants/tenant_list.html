@@ -14,15 +14,15 @@
   </thead>
   <tbody>
     {% for tenant in tenants %}
-    <tr>
-      <td><a href="{% url 'tenant_detail' tenant.pk %}">{{ tenant.name }}</a></td>
-      <td>{{ tenant.schema_name }}</td>
-      <td>{{ tenant.created_at }}</td>
-      <td>
-        <a href="{% url 'tenant_update' tenant.pk %}">Edit</a>
-        <a href="{% url 'tenant_delete' tenant.pk %}">Delete</a>
-      </td>
-    </tr>
+      <tr>
+        <td><a href="{% url 'tenant_detail' tenant.pk %}">{{ tenant.name }}</a></td>
+        <td>{{ tenant.schema_name }}</td>
+        <td>{{ tenant.created_at }}</td>
+        <td>
+          <a href="{% url 'tenant_update' tenant.pk %}">Edit</a>
+          <a href="{% url 'tenant_delete' tenant.pk %}">Delete</a>
+        </td>
+      </tr>
     {% endfor %}
   </tbody>
 </table>

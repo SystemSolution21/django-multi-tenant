@@ -3,126 +3,121 @@
 {% block title %}{{ object.name }} - {{ block.super }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>{{ object.name }}</h1>
-    <div>
-        <a href="{% url 'tenant_update' object.pk %}" class="btn btn-outline-primary">Edit</a>
-        <a href="{% url 'tenant_delete' object.pk %}" class="btn btn-outline-danger">Delete</a>
-    </div>
+  <h1>{{ object.name }}</h1>
+  <div>
+    <a href="{% url 'tenant_update' object.pk %}" class="btn btn-outline-primary">Edit</a>
+    <a href="{% url 'tenant_delete' object.pk %}" class="btn btn-outline-danger">Delete</a>
+  </div>
 </div>
 <!-- Tenant Information -->
 <div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5>Tenant Information</h5>
-            </div>
-            <div class="card-body">
-                <dl class="row">
-                    <dt class="col-sm-3">Tenant ID:</dt>
-                    <dd class="col-sm-9">{{ object.id }}</dd>
-
-                    <dt class="col-sm-3">Name:</dt>
-                    <dd class="col-sm-9">{{ object.name }}</dd>
-
-                    <dt class="col-sm-3">Schema Name:</dt>
-                    <dd class="col-sm-9"><code>{{ object.schema_name }}</code></dd>
-
-                    <dt class="col-sm-3">Domain:</dt>
-                    <dd class="col-sm-9">
-                        {% if object.domains.exists %}
-                            {% for domain in object.domains.all %}
-                                <span class="badge bg-info">{{ domain.domain }}</span>
-                            {% endfor %}
-                        {% else %}
-                            <span class="text-muted">No domains configured</span>
-                        {% endif %}
-                    </dd>
-
-                    <dt class="col-sm-3">Created:</dt>
-                    <dd class="col-sm-9">{{ object.created_on|date:"F d, Y g:i A" }}</dd>
-                </dl>
-            </div>
-        </div>
-        <!-- Tenant Users -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5>Tenant Users</h5>
-            </div>
-            <div class="card-body">
-                {% if object.tenantuser_set.exists %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Email</th>
-                                    <th>Name</th>
-                                    <th>Role</th>
-                                    <th>Tenant Admin</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for tenant_user in object.tenantuser_set.all %}
-                                <tr>
-                                    <td>{{ tenant_user.user.email }}</td>
-                                    <td>{{ tenant_user.user.first_name }} {{ tenant_user.user.last_name }}</td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ tenant_user.user.role|default:"user" }}</span>
-                                    </td>
-                                    <td>
-                                        {% if tenant_user.user.is_tenant_admin %}
-                                            <span class="badge bg-success">Yes</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">No</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="text-muted">No users assigned to this tenant yet.</p>
-                {% endif %}
-            </div>
-        </div>
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5>Tenant Information</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row">
+          <dt class="col-sm-3">Tenant ID:</dt>
+          <dd class="col-sm-9">{{ object.id }}</dd>
+          <dt class="col-sm-3">Name:</dt>
+          <dd class="col-sm-9">{{ object.name }}</dd>
+          <dt class="col-sm-3">Schema Name:</dt>
+          <dd class="col-sm-9"><code>{{ object.schema_name }}</code></dd>
+          <dt class="col-sm-3">Domain:</dt>
+          <dd class="col-sm-9">
+            {% if object.domains.exists %}
+              {% for domain in object.domains.all %}
+                <span class="badge bg-info">{{ domain.domain }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="text-muted">No domains configured</span>
+            {% endif %}
+          </dd>
+          <dt class="col-sm-3">Created:</dt>
+          <dd class="col-sm-9">{{ object.created_on|date:"F d, Y g:i A" }}</dd>
+        </dl>
+      </div>
     </div>
-    <!-- Quick Actions -->
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5>Quick Actions</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="{% url 'tenant_update' object.pk %}" class="btn btn-outline-primary">
-                        <i class="bi bi-pencil"></i> Edit Tenant
-                    </a>
-                    <a href="{% url 'tenant_delete' object.pk %}" class="btn btn-outline-danger">
-                        <i class="bi bi-trash"></i> Delete Tenant
-                    </a>
-                </div>
-            </div>
-        </div>
-        <!-- Statistics -->
-        <div class="card">
-            <div class="card-header">
-                <h5>Statistics</h5>
-            </div>
-            <div class="card-body">
-                <dl>
-                    <dt>Total Users:</dt>
-                    <dd>{{ object.tenantuser_set.count }}</dd>
-
-                    <dt>Domains:</dt>
-                    <dd>{{ object.domains.count }}</dd>
-                </dl>
-            </div>
-        </div>
+    <!-- Tenant Users -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5>Tenant Users</h5>
+      </div>
+      <div class="card-body">
+        {% if object.tenantuser_set.exists %}
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Tenant Admin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for tenant_user in object.tenantuser_set.all %}
+                  <tr>
+                    <td>{{ tenant_user.user.email }}</td>
+                    <td>{{ tenant_user.user.first_name }} {{ tenant_user.user.last_name }}</td>
+                    <td>
+                      <span class="badge bg-secondary">{{ tenant_user.user.role|default:"user" }}</span>
+                    </td>
+                    <td>
+                      {% if tenant_user.user.is_tenant_admin %}
+                        <span class="badge bg-success">Yes</span>
+                      {% else %}
+                        <span class="badge bg-secondary">No</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted">No users assigned to this tenant yet.</p>
+        {% endif %}
+      </div>
     </div>
+  </div>
+  <!-- Quick Actions -->
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5>Quick Actions</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{% url 'tenant_update' object.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> Edit Tenant
+          </a>
+          <a href="{% url 'tenant_delete' object.pk %}" class="btn btn-outline-danger">
+            <i class="bi bi-trash"></i> Delete Tenant
+          </a>
+        </div>
+      </div>
+    </div>
+    <!-- Statistics -->
+    <div class="card">
+      <div class="card-header">
+        <h5>Statistics</h5>
+      </div>
+      <div class="card-body">
+        <dl>
+          <dt>Total Users:</dt>
+          <dd>{{ object.tenantuser_set.count }}</dd>
+          <dt>Domains:</dt>
+          <dd>{{ object.domains.count }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
 </div>
 <!-- Back to Tenants -->
 <div class="mt-4">
-    <a href="{% url 'tenant_list' %}" class="btn btn-secondary">Back to Tenants</a>
+  <a href="{% url 'tenant_list' %}" class="btn btn-secondary">Back to Tenants</a>
 </div>
 {% endblock %}
 

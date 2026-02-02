@@ -292,6 +292,13 @@ class AcceptInvitationView(View):
             messages.error(request, "This invitation has expired.")
             return redirect("index")
 
+        # UX Improvement: Warn immediately if logged in as the wrong user
+        if request.user.is_authenticated and request.user.email != invitation.email:
+            messages.warning(
+                request,
+                f"You are logged in as {request.user.email}. This invitation is for {invitation.email}. Please log out and log in as the correct user.",
+            )
+
         return render(
             request,
             "tenants/accept_invitation.html",
@@ -403,7 +410,7 @@ class UserEditView(TenantAdminRequiredMixin, UpdateView):
         return reverse(viewname="user_list")
 
 
-class UserRemoveView(LoginRequiredMixin, View):
+class UserRemoveView(TenantAdminRequiredMixin, View):
     """
     Remove user from current tenant instead of deleting the user.
     """

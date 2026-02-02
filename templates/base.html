@@ -1,5 +1,6 @@
 <!-- templates/base.html -->
 {% load static %}
+{% load tenant_tags %}
 <!DOCTYPE html>
 <html lang="en">
   <head> 
@@ -33,7 +34,8 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <!-- Navbar Links -->
-          <ul class="navbar-nav">
+          {% is_tenant_admin as user_is_tenant_admin %}
+            <ul class="navbar-nav">
             {% if request.tenant.schema_name == 'public' %}
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
@@ -54,7 +56,7 @@
                 <li class="nav-item">
                   <a class="nav-link" href="{% url 'task_list' %}">Tasks</a>
                 </li>
-                {% if user.is_tenant_admin %}
+                {% if user_is_tenant_admin %}
                   <li class="nav-item">
                     <a class="nav-link" href="{% url 'user_list' %}">Users</a>
                   </li>
@@ -128,7 +130,7 @@
                   <li class="nav-item">
                     <a class="nav-link" href="{% url 'task_list' %}">Tasks</a>
                   </li>
-                  {% if user.is_tenant_admin %}
+                  {% if user_is_tenant_admin %}
                     <li class="nav-item">
                       <a class="nav-link" href="{% url 'user_list' %}">Users</a>
                     </li>

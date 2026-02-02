@@ -46,6 +46,7 @@ SHARED_APPS = [
     "django_tenants",  # django-tenants
     "crispy_forms",
     "crispy_bootstrap5",
+    "core.apps.CoreConfig",  # local core app
     "core.apps.CustomAdminConfig",  # Custom admin configuration
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -57,7 +58,6 @@ SHARED_APPS = [
     "tenants.apps.TenantsConfig",  # local tenants app
     "accounts.apps.AccountsConfig",  # local accounts app
     "blog.apps.BlogConfig",  # local blog app
-    "tenant_users.permissions",  # django-tenant-users
     "tenant_users.tenants",  # django-tenant-users
 ]
 

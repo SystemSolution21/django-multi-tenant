@@ -13,10 +13,22 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("email", type=str, help="Email of the user to update")
         parser.add_argument("schema_name", type=str, help="Schema name of the tenant")
+        parser.add_argument(
+            "--set-tenant-admin",
+            action="store_true",
+            help="Set tenant-specific is_superuser and is_staff to True",
+        )
+        parser.add_argument(
+            "--set-tenant-regular",
+            action="store_true",
+            help="Set tenant-specific is_superuser to False and is_staff to True (for regular users)",
+        )
 
     def handle(self, *args, **options):
         email = options["email"]
         schema_name = options["schema_name"]
+        set_tenant_admin = options["set_tenant_admin"]
+        set_tenant_regular = options["set_tenant_regular"]
         User = get_user_model()
 
         try:
@@ -29,31 +41,56 @@ class Command(BaseCommand):
         except Tenant.DoesNotExist:
             raise CommandError(f'Tenant "{schema_name}" does not exist')
 
-        # 1. Remove Global Superuser status
+        # 1. Update Global User properties
         user.is_superuser = False
         user.is_staff = True  # Required to access /admin/
+
+        # Update the global role based on the command flags
+        if set_tenant_admin:
+            user.role = "admin"
+        elif set_tenant_regular:
+            user.role = "user"
+
         user.save()
         self.stdout.write("Global User updated: is_superuser=False, is_staff=True")
 
         # 2. Assign specific permissions INSIDE the tenant context
         with schema_context(tenant.schema_name):
-            # Get content types for your models
-            project_ct = ContentType.objects.get(app_label="tasks", model="project")
-            task_ct = ContentType.objects.get(app_label="tasks", model="task")
-
-            # Get permissions
-            permissions = Permission.objects.filter(
-                content_type__in=[project_ct, task_ct]
-            )
-
             utp = UserTenantPermissions.objects.get(profile=user)
-            utp.user_permissions.set(permissions)
 
-            # Ensure tenant-level flags are also correct (if your model supports them)
-            if hasattr(utp, "is_superuser"):
+            if set_tenant_admin:
+                utp.is_superuser = True
+                utp.is_staff = True
+                utp.user_permissions.clear()  # Clear specific permissions if they are a tenant superuser
+                self.stdout.write(f"Set '{email}' as tenant admin for '{schema_name}'.")
+            elif set_tenant_regular:
                 utp.is_superuser = False
                 utp.is_staff = True
-                utp.save()
+                # Assign specific permissions for the Tasks app INSIDE the tenant context
+                project_ct = ContentType.objects.get(app_label="tasks", model="project")
+                task_ct = ContentType.objects.get(app_label="tasks", model="task")
+                permissions = Permission.objects.filter(
+                    content_type__in=[project_ct, task_ct]
+                )
+                utp.user_permissions.set(permissions)
+                self.stdout.write(
+                    f"Set '{email}' as regular tenant user for '{schema_name}' with Task/Project permissions."
+                )
+            else:
+                # Default behavior: demote to regular user if no specific flag is given
+                utp.is_superuser = False
+                utp.is_staff = True
+                project_ct = ContentType.objects.get(app_label="tasks", model="project")
+                task_ct = ContentType.objects.get(app_label="tasks", model="task")
+                permissions = Permission.objects.filter(
+                    content_type__in=[project_ct, task_ct]
+                )
+                utp.user_permissions.set(permissions)
+                self.stdout.write(
+                    f"Default: Set '{email}' as regular tenant user for '{schema_name}' with Task/Project permissions."
+                )
+
+            utp.save()
 
             self.stdout.write(
                 self.style.SUCCESS(f"Permissions updated for {email} in {schema_name}")

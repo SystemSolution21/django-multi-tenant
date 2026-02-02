@@ -8,10 +8,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db import connection
 
+# Import third-party libraries
+from tenant_users.permissions.models import UserTenantPermissions
+
 if TYPE_CHECKING:
     from django.http import HttpRequest
-
-    from .models import User
 
 
 class TenantAdminRequiredMixin(LoginRequiredMixin):
@@ -21,15 +22,23 @@ class TenantAdminRequiredMixin(LoginRequiredMixin):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
-        # Check if user is tenant admin or superuser
-        user = request.user
-        is_tenant_admin = getattr(user, "is_tenant_admin", False)
-        if not (is_tenant_admin or user.is_superuser):
-            raise PermissionDenied(
-                "You must be a tenant administrator to access this page."
-            )
+        # 1. Global Superuser always has access
+        if request.user.is_superuser:
+            return super().dispatch(request, *args, **kwargs)
 
-        return super().dispatch(request, *args, **kwargs)
+        # 2. Check Tenant-Specific Permissions
+        # We query the UserTenantPermissions table to see if this user
+        # has admin rights (is_superuser=True) for the CURRENT tenant.
+        try:
+            utp = UserTenantPermissions.objects.get(profile=request.user)
+            if utp.is_superuser:
+                return super().dispatch(request, *args, **kwargs)
+        except UserTenantPermissions.DoesNotExist:
+            pass
+
+        raise PermissionDenied(
+            "You must be a tenant administrator to access this page."
+        )
 
 
 class TenantStaffRequiredMixin(UserPassesTestMixin):
@@ -39,8 +48,18 @@ class TenantStaffRequiredMixin(UserPassesTestMixin):
         request: HttpRequest
 
     def test_func(self) -> bool:
-        user: "User" = self.request.user  # type: ignore[assignment]
-        return user.is_authenticated and user.role in ["admin", "staff"]
+        user = self.request.user
+        if not user.is_authenticated:
+            return False
+
+        if user.is_superuser:
+            return True
+
+        try:
+            utp = UserTenantPermissions.objects.get(profile=user)
+            return utp.is_staff
+        except UserTenantPermissions.DoesNotExist:
+            return False
 
 
 class PublicSchemaRequiredMixin(UserPassesTestMixin):

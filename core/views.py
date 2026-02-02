@@ -1,16 +1,17 @@
 # core/views.py
 
-# Import django libraries
+# Import standard libraries
 from typing import Any
+
+# Import django libraries
 from django.db import connection
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 
-from blog.models import Article
-
 # Import local modules
+from blog.models import Article
 from tasks.models import Project, Task
 
 

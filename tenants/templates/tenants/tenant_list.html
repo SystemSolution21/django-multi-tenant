@@ -1,31 +1,29 @@
+<!-- tenants/templates/tenants/tenant_list.html -->
 {% extends "base.html" %}
-
 {% block content %}
 <h2>Tenants</h2>
 <a href="{% url 'tenant_create' %}" class="btn btn-primary">Create Tenant</a>
 <table class="table">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Schema</th>
-            <th>Created</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for tenant in tenants %}
-        <tr>
-            <td><a href="{% url 'tenant_detail' tenant.pk %}">{{ tenant.name }}</a></td>
-            <td>{{ tenant.schema_name }}</td>
-            <td>{{ tenant.created_at }}</td>
-            <td>
-                <a href="{% url 'tenant_update' tenant.pk %}">Edit</a>
-                <a href="{% url 'tenant_delete' tenant.pk %}">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Schema</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for tenant in tenants %}
+    <tr>
+      <td><a href="{% url 'tenant_detail' tenant.pk %}">{{ tenant.name }}</a></td>
+      <td>{{ tenant.schema_name }}</td>
+      <td>{{ tenant.created_at }}</td>
+      <td>
+        <a href="{% url 'tenant_update' tenant.pk %}">Edit</a>
+        <a href="{% url 'tenant_delete' tenant.pk %}">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
-<!-- Back to home button -->
-<a href="{% url 'index' %}" class="btn btn-secondary">Back to Home</a>
 {% endblock %}

@@ -38,6 +38,10 @@ class User(UserProfile):
         # 3. Delegate to parent logic for tenant-specific checks
         return cast(bool, super().is_superuser)
 
+    @is_superuser.setter
+    def is_superuser(self, value: bool) -> None:
+        self.__dict__["is_superuser"] = value
+
     @property
     def is_staff(self) -> bool:
         """
@@ -48,6 +52,10 @@ class User(UserProfile):
         if connection.schema_name == "public":
             return False
         return cast(bool, super().is_staff)
+
+    @is_staff.setter
+    def is_staff(self, value: bool) -> None:
+        self.__dict__["is_staff"] = value
 
     ROLE_CHOICES: list[tuple[str, str]] = [
         ("admin", "Admin"),

@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.db import ProgrammingError, connection, models
 from django_tenants.admin import TenantAdminMixin
 from django_tenants.utils import schema_context
+from tenant_users.permissions.models import UserTenantPermissions
 
 # Import local modules
 from tenants.models import Domain, Tenant, User
@@ -59,11 +60,28 @@ class UserAdminForm(forms.ModelForm):
             self.fields["is_superuser"].initial = self.instance.is_superuser
 
     def save(self, commit=True):
+        # Save other user fields first
         user = super().save(commit=False)
-        user.is_staff = self.cleaned_data["is_staff"]
-        user.is_superuser = self.cleaned_data["is_superuser"]
         if commit:
             user.save()
+
+        # The is_staff and is_superuser are properties; we cannot assign to them directly.
+        # We must handle saving them based on the current schema context.
+        is_staff = self.cleaned_data.get("is_staff", False)
+        is_superuser = self.cleaned_data.get("is_superuser", False)
+
+        if connection.schema_name == "public":
+            # On public schema, update the global flags directly in the DB
+            User.objects.filter(pk=user.pk).update(
+                is_staff=is_staff, is_superuser=is_superuser
+            )
+        elif commit:
+            # On a tenant schema, update the tenant-specific permissions
+            utp, created = UserTenantPermissions.objects.get_or_create(profile=user)
+            utp.is_staff = is_staff
+            utp.is_superuser = is_superuser
+            utp.save()
+
         return user
 
 

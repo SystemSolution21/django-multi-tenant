@@ -8,15 +8,15 @@ from typing import Any
 from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 
 # Import third-party libraries
 from psycopg2 import connect, errors, sql
 from psycopg2.extensions import connection, cursor
 from tenant_users.tenants.tasks import provision_tenant
-from tenant_users.tenants.utils import create_public_tenant
 
 # Import local modules
-from tenants.models import User
+from tenants.models import Domain, User, Tenant
 
 TENANTS_JSON_PATH: str = settings.BASE_DIR / "tenants" / "data" / "tenants.json"
 
@@ -126,33 +126,49 @@ class Command(BaseCommand):
         self.stdout.write(msg="Creating the public tenant...")
         public_tenant_data: dict[str, Any] = tenants_data[0]
 
-        # create_public_tenant handles the chicken-and-egg problem
-        public_tenant, public_domain, public_owner_base = create_public_tenant(
-            domain_url=settings.BASE_DOMAIN,
-            tenant_extra_data={"slug": public_tenant_data["subdomain"]},
-            owner_email=public_tenant_data["owner"]["email"],
-            is_superuser=True,
-            is_staff=True,
-            password=public_tenant_data["owner"]["password"],
-            is_verified=True,
-        )
+        # Manually create the public tenant and superuser to avoid
+        # calling `add_user` which tries to create a UserTenantPermissions
+        # record in the public schema (where the table doesn't exist).
+        with transaction.atomic():
+            # Create the global superuser manually to avoid UserProfileManager.create_user
+            # which expects the public tenant to already exist.
+            public_owner = User(
+                email=public_tenant_data["owner"]["email"],
+                is_verified=True,
+                is_active=True,
+                role="admin",
+                is_superuser=True,
+                is_staff=True,
+            )
+            public_owner.set_password(public_tenant_data["owner"]["password"])
+            public_owner.save()
 
-        # Update public owner with custom fields (cast to our User model)
-        public_owner = User.objects.get(email=public_tenant_data["owner"]["email"])
-        public_owner.role = "admin"
-        public_owner.save()
+            # Create the public tenant instance
+            public_tenant = Tenant.objects.create(
+                schema_name=settings.PUBLIC_SCHEMA_NAME,
+                name=public_tenant_data["name"],
+                owner=public_owner,
+                slug=public_tenant_data["subdomain"],
+            )
+
+            # Create the domain for the public tenant
+            Domain.objects.create(
+                domain=settings.BASE_DOMAIN, tenant=public_tenant, is_primary=True
+            )
 
         # Create other tenants
         for tenant_data in tenants_data[1:]:
             self.stdout.write(msg=f"Creating tenant {tenant_data['name']}...")
 
             # Create the tenant owner user first (now public tenant exists)
-            tenant_owner = User.objects.create_user(  # type: ignore[attr-defined]
+            # Manual creation to avoid UserProfileManager.create_user trying to write to missing public permissions table
+            tenant_owner = User(
                 email=tenant_data["owner"]["email"],
-                password=tenant_data["owner"]["password"],
+                is_active=True,
+                is_verified=True,
+                role="admin",
             )
-            tenant_owner.is_verified = True
-            tenant_owner.role = "admin"
+            tenant_owner.set_password(tenant_data["owner"]["password"])
             tenant_owner.save()
 
             # Create the tenant with the owner

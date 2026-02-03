@@ -19,6 +19,12 @@ class User(UserProfile):
     Extended user model with additional fields.
     """
 
+    # These fields are used by the parent UserProfile from django-tenant-users
+    # to store the global superuser/staff status. We add type hints here
+    # to make them visible to static type checkers like Pylance.
+    _is_superuser: bool
+    _is_staff: bool
+
     ROLE_CHOICES: list[tuple[str, str]] = [
         ("admin", "Admin"),
         ("staff", "Staff"),

@@ -1,8 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
-from tenants.models import Tenant
+from tenants.models import Tenant, User
 from tenant_users.permissions.models import UserTenantPermissions
 from django_tenants.utils import schema_context
 
@@ -23,27 +22,42 @@ class Command(BaseCommand):
             action="store_true",
             help="Set tenant-specific is_superuser to False and is_staff to True (for regular users)",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Allow demoting a global superuser. Use with caution.",
+        )
 
     def handle(self, *args, **options):
         email = options["email"]
         schema_name = options["schema_name"]
         set_tenant_admin = options["set_tenant_admin"]
         set_tenant_regular = options["set_tenant_regular"]
-        User = get_user_model()
+        force = options["force"]
 
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             raise CommandError(f'User "{email}" does not exist')
 
+        # Add a safeguard to prevent accidental demotion of a global superuser
+        if user.is_superuser and not force:
+            raise CommandError(
+                f'User "{email}" is a global superuser. '
+                "This command is intended for tenant users. "
+                "Use --force to override this safeguard."
+            )
         try:
             tenant = Tenant.objects.get(schema_name=schema_name)
         except Tenant.DoesNotExist:
             raise CommandError(f'Tenant "{schema_name}" does not exist')
 
         # 1. Update Global User properties
-        user.is_superuser = False
-        user.is_staff = True  # Required to access /admin/
+        # The django-tenant-users library overrides `is_superuser` and `is_staff`
+        # as read-only properties. To set the global flags, we must assign
+        # to the underlying database fields `_is_superuser` and `_is_staff`.
+        user._is_superuser = False
+        user._is_staff = True  # Required to access /admin/
 
         # Update the global role based on the command flags
         if set_tenant_admin:
@@ -63,7 +77,7 @@ class Command(BaseCommand):
                 utp.is_staff = True
                 utp.user_permissions.clear()  # Clear specific permissions if they are a tenant superuser
                 self.stdout.write(f"Set '{email}' as tenant admin for '{schema_name}'.")
-            elif set_tenant_regular:
+            else:  # This covers both --set-tenant-regular and the default case
                 utp.is_superuser = False
                 utp.is_staff = True
                 # Assign specific permissions for the Tasks app INSIDE the tenant context
@@ -73,22 +87,15 @@ class Command(BaseCommand):
                     content_type__in=[project_ct, task_ct]
                 )
                 utp.user_permissions.set(permissions)
-                self.stdout.write(
-                    f"Set '{email}' as regular tenant user for '{schema_name}' with Task/Project permissions."
-                )
-            else:
-                # Default behavior: demote to regular user if no specific flag is given
-                utp.is_superuser = False
-                utp.is_staff = True
-                project_ct = ContentType.objects.get(app_label="tasks", model="project")
-                task_ct = ContentType.objects.get(app_label="tasks", model="task")
-                permissions = Permission.objects.filter(
-                    content_type__in=[project_ct, task_ct]
-                )
-                utp.user_permissions.set(permissions)
-                self.stdout.write(
-                    f"Default: Set '{email}' as regular tenant user for '{schema_name}' with Task/Project permissions."
-                )
+
+                if set_tenant_regular:
+                    self.stdout.write(
+                        f"Set '{email}' as regular tenant user for '{schema_name}' with Task/Project permissions."
+                    )
+                else:  # Default case message
+                    self.stdout.write(
+                        f"Default: Set '{email}' as regular tenant user for '{schema_name}' with Task/Project permissions."
+                    )
 
             utp.save()
 

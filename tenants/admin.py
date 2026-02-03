@@ -73,10 +73,10 @@ class UserAdmin(admin.ModelAdmin):
 
     form = UserAdminForm
 
-    list_display: list[str] = ["id", "email", "role", "is_tenant_admin", "is_active"]
+    list_display: list[str] = ["id", "email", "role", "is_active"]
     list_display_links: list[str] = ["id", "email"]
     search_fields: list[str] = ["email", "first_name", "last_name"]
-    list_filter: list[str] = ["role", "is_tenant_admin", "is_active"]
+    list_filter: list[str] = ["role", "is_active"]
     fieldsets = [
         (
             None,
@@ -102,7 +102,6 @@ class UserAdmin(admin.ModelAdmin):
             {
                 "fields": [
                     "role",
-                    "is_tenant_admin",
                     "is_active",
                     "is_verified",
                     "is_staff",

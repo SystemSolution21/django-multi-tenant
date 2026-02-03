@@ -9,7 +9,6 @@ from django.core.exceptions import PermissionDenied
 from django.db import connection
 
 # Import third-party libraries
-from tenant_users.permissions.models import UserTenantPermissions
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -22,19 +21,16 @@ class TenantAdminRequiredMixin(LoginRequiredMixin):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
-        # 1. Global Superuser always has access
+        # This mixin is for tenant-specific views. It should not be used on the public schema.
+        # A global superuser will pass the check below, but this prevents misuse.
+        if connection.schema_name == "public":
+            raise PermissionDenied("This page is not accessible on the public domain.")
+
+        # In a tenant schema, the `user.is_superuser` property from `django-tenant-users`
+        # correctly checks for both global superuser status and tenant-specific
+        # admin status (`UserTenantPermissions.is_superuser`). This single check is sufficient.
         if request.user.is_superuser:
             return super().dispatch(request, *args, **kwargs)
-
-        # 2. Check Tenant-Specific Permissions
-        # We query the UserTenantPermissions table to see if this user
-        # has admin rights (is_superuser=True) for the CURRENT tenant.
-        try:
-            utp = UserTenantPermissions.objects.get(profile=request.user)
-            if utp.is_superuser:
-                return super().dispatch(request, *args, **kwargs)
-        except UserTenantPermissions.DoesNotExist:
-            pass
 
         raise PermissionDenied(
             "You must be a tenant administrator to access this page."
@@ -52,14 +48,14 @@ class TenantStaffRequiredMixin(UserPassesTestMixin):
         if not user.is_authenticated:
             return False
 
-        if user.is_superuser:
-            return True
-
-        try:
-            utp = UserTenantPermissions.objects.get(profile=user)
-            return utp.is_staff
-        except UserTenantPermissions.DoesNotExist:
+        # This mixin is for tenant-specific views.
+        if connection.schema_name == "public":
             return False
+
+        # The user.is_staff property from django-tenant-users handles both
+        # global and tenant-specific staff checks. A global superuser is
+        # also considered staff.
+        return user.is_staff
 
 
 class PublicSchemaRequiredMixin(UserPassesTestMixin):

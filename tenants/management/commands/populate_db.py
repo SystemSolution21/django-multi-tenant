@@ -140,7 +140,6 @@ class Command(BaseCommand):
         # Update public owner with custom fields (cast to our User model)
         public_owner = User.objects.get(email=public_tenant_data["owner"]["email"])
         public_owner.role = "admin"
-        public_owner.is_tenant_admin = True
         public_owner.save()
 
         # Create other tenants
@@ -154,7 +153,6 @@ class Command(BaseCommand):
             )
             tenant_owner.is_verified = True
             tenant_owner.role = "admin"
-            tenant_owner.is_tenant_admin = True
             tenant_owner.save()
 
             # Create the tenant with the owner

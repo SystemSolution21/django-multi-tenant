@@ -3,9 +3,10 @@
 # Import standard libraries
 import uuid
 from datetime import timedelta
+from typing import cast
 
 # Import django libraries
-from django.db import models
+from django.db import models, connection
 from django.utils import timezone
 from django_tenants.models import DomainMixin
 from tenant_users.tenants.models import TenantBase, UserProfile
@@ -19,11 +20,34 @@ class User(UserProfile):
     Extended user model with additional fields.
     """
 
-    # These fields are used by the parent UserProfile from django-tenant-users
-    # to store the global superuser/staff status. We add type hints here
-    # to make them visible to static type checkers like Pylance.
-    _is_superuser: bool
-    _is_staff: bool
+    @property
+    def is_superuser(self) -> bool:
+        """
+        Override is_superuser to safely handle public schema checks.
+        """
+        # 1. Global superuser flag always wins.
+        # We access the raw value from __dict__ to avoid recursion caused by the property shadowing the field.
+        if self.__dict__.get("is_superuser", False):
+            return True
+
+        # 2. If on public schema, we cannot check tenant permissions
+        # because the table doesn't exist. Return False.
+        if connection.schema_name == "public":
+            return False
+
+        # 3. Delegate to parent logic for tenant-specific checks
+        return cast(bool, super().is_superuser)
+
+    @property
+    def is_staff(self) -> bool:
+        """
+        Override is_staff to safely handle public schema checks.
+        """
+        if self.__dict__.get("is_staff", False):
+            return True
+        if connection.schema_name == "public":
+            return False
+        return cast(bool, super().is_staff)
 
     ROLE_CHOICES: list[tuple[str, str]] = [
         ("admin", "Admin"),
@@ -35,7 +59,6 @@ class User(UserProfile):
     last_name = models.CharField(max_length=30, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
-    is_tenant_admin = models.BooleanField(default=False)
 
     def __str__(self) -> str:
         return f"{self.email} ({self.get_role_display()})"  # type: ignore[attr-defined]

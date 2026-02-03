@@ -53,11 +53,9 @@ class Command(BaseCommand):
             raise CommandError(f'Tenant "{schema_name}" does not exist')
 
         # 1. Update Global User properties
-        # The django-tenant-users library overrides `is_superuser` and `is_staff`
-        # as read-only properties. To set the global flags, we must assign
-        # to the underlying database fields `_is_superuser` and `_is_staff`.
-        user._is_superuser = False
-        user._is_staff = True  # Required to access /admin/
+        # Use update() to modify the DB columns directly, bypassing the read-only properties.
+        # We set is_superuser=False (demote global admin) and is_staff=True (allow admin access).
+        User.objects.filter(pk=user.pk).update(is_superuser=False, is_staff=True)
 
         # Update the global role based on the command flags
         if set_tenant_admin:
@@ -65,7 +63,8 @@ class Command(BaseCommand):
         elif set_tenant_regular:
             user.role = "user"
 
-        user.save()
+        # Only update the role field to avoid overwriting the is_superuser/is_staff changes
+        user.save(update_fields=["role"])
         self.stdout.write("Global User updated: is_superuser=False, is_staff=True")
 
         # 2. Assign specific permissions INSIDE the tenant context

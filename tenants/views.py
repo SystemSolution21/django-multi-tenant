@@ -339,8 +339,6 @@ class AcceptInvitationView(View):
             # Update user role
             user = User.objects.get(pk=request.user.pk)
             user.role = invitation.role
-            if invitation.role == "admin":
-                user.is_tenant_admin = True
             user.save()
 
             # Mark invitation as accepted
@@ -400,7 +398,7 @@ class UserEditView(TenantAdminRequiredMixin, UpdateView):
 
     model = User
     template_name = "tenants/user_edit.html"
-    fields: list[str] = ["first_name", "last_name", "role", "is_tenant_admin"]
+    fields: list[str] = ["first_name", "last_name", "role"]
 
     def get_queryset(self) -> BaseManager[User]:
         # Only show users in current tenant

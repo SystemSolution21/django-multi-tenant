@@ -3,7 +3,7 @@
 # Import standard libraries
 import uuid
 from datetime import timedelta
-from typing import cast
+from typing import Any, cast
 
 # Import django libraries
 from django.db import models, connection
@@ -56,6 +56,28 @@ class User(UserProfile):
     @is_staff.setter
     def is_staff(self, value: bool) -> None:
         self.__dict__["is_staff"] = value
+
+    def has_perm(self, perm: str, obj: Any | None = None) -> bool:
+        """
+        Override has_perm to safely handle public schema checks.
+        A global superuser always has all permissions.
+        """
+        if self.__dict__.get("is_superuser", False):
+            return True
+        if connection.schema_name == "public":
+            return False
+        return super().has_perm(perm, obj)
+
+    def has_module_perms(self, app_label: str) -> bool:
+        """
+        Override has_module_perms to safely handle public schema checks.
+        A global superuser always has all permissions.
+        """
+        if self.__dict__.get("is_superuser", False):
+            return True
+        if connection.schema_name == "public":
+            return False
+        return super().has_module_perms(app_label)
 
     ROLE_CHOICES: list[tuple[str, str]] = [
         ("admin", "Admin"),

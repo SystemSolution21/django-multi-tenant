@@ -2,7 +2,7 @@
 
 # Import standard libraries
 import json
-from typing import Any
+from typing import Any, cast
 
 # Import django libraries
 from django.conf import settings
@@ -14,6 +14,7 @@ from django.db import transaction
 from psycopg2 import connect, errors, sql
 from psycopg2.extensions import connection, cursor
 from tenant_users.tenants.tasks import provision_tenant
+from tenant_users.tenants.models import UserProfileManager
 
 # Import local modules
 from tenants.models import Domain, User, Tenant
@@ -130,18 +131,19 @@ class Command(BaseCommand):
         # calling `add_user` which tries to create a UserTenantPermissions
         # record in the public schema (where the table doesn't exist).
         with transaction.atomic():
-            # Create the global superuser manually to avoid UserProfileManager.create_user
-            # which expects the public tenant to already exist.
-            public_owner = User(
-                email=public_tenant_data["owner"]["email"],
-                is_verified=True,
-                is_active=True,
-                role="admin",
-                is_superuser=True,
-                is_staff=True,
+            # Use the canonical `create_superuser` method to ensure all flags are set correctly.
+            user_manager = cast(UserProfileManager, User.objects)
+            public_owner = cast(
+                User,
+                user_manager.create_superuser(
+                    email=public_tenant_data["owner"]["email"],
+                    password=public_tenant_data["owner"]["password"],
+                ),
             )
-            public_owner.set_password(public_tenant_data["owner"]["password"])
-            public_owner.save()
+            # Set our custom fields and save them.
+            public_owner.is_verified = True
+            public_owner.role = "admin"
+            public_owner.save(update_fields=["is_verified", "role"])
 
             # Create the public tenant instance
             public_tenant = Tenant.objects.create(

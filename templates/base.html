@@ -22,7 +22,7 @@
             <img src="{% static 'core/SaaS.svg' %}" alt="SaaS Platform" height="30"/>
           {% if request.tenant.schema_name == 'public' %}
             SaaS Platform
-          {% else%} {{ request.tenant.name }} {% endif %}
+          {% else %} {{ request.tenant.name }} {% endif %}
         </a>
         <button
           class="navbar-toggler"

@@ -32,7 +32,7 @@
         </a>
         {% if user.is_authenticated %}
           {% if user.role == "admin" %}
-            {% if user.is_superuser %}
+            {% if user.is_global_superuser %}
               <a href="{% url 'article_update' article.pk %}" class="btn btn-outline-primary">
                 <i class="bi bi-pencil"></i> Edit
               </a>

@@ -6,7 +6,7 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Blog Articles</h1>
     {% if user.is_authenticated %}
-      {% if user.is_superuser %}
+      {% if user.is_global_superuser %}
         <a href="{% url 'article_create' %}" class="btn btn-primary">
           <i class="bi bi-plus-circle"></i> New Article
         </a>
@@ -41,7 +41,7 @@
                   Read More
                 </a>
                 {% if user.is_authenticated %}
-                  {% if user.is_superuser %}
+                  {% if user.is_global_superuser %}
                     <a href="{% url 'article_update' article.pk %}" class="btn btn-sm btn-outline-secondary">
                       Edit
                     </a>
@@ -91,9 +91,11 @@
       <p>There are no blog articles available at the moment.</p>
       <hr>
       {% if user.is_authenticated %}
-        <p class="mb-0">
-          <a href="{% url 'article_create' %}" class="btn btn-primary">Create First Article</a>
-        </p>
+        {% if user.is_global_superuser %}
+          <p class="mb-0">
+            <a href="{% url 'article_create' %}" class="btn btn-primary">Create First Article</a>
+          </p>
+        {% endif %}
       {% endif %}
     </div>
   {% endif %}

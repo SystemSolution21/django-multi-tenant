@@ -40,9 +40,12 @@
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
               </li>
-              {% if user.is_authenticated and user.is_superuser %}
+              {% if user.is_authenticated and user.is_global_superuser %}
                 <li class="nav-item">
                   <a class="nav-link" href="{% url 'tenant_list' %}">Tenants</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'user_list' %}">Users</a>
                 </li>
               {% endif %}
             {% else %}
@@ -111,9 +114,12 @@
                 <li class="nav-item">
                   <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
                 </li>
-                {% if user.is_authenticated and user.is_superuser %}
+                {% if user.is_authenticated and user.is_global_superuser %}
                   <li class="nav-item">
                     <a class="nav-link" href="{% url 'tenant_list' %}">Tenants</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="{% url 'user_list' %}">Users</a>
                   </li>
                 {% endif %}
               {% else %}

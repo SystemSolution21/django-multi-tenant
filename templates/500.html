@@ -1,0 +1,17 @@
+<!-- templates/500.html -->
+{% extends 'base.html' %}
+{% block title %}Internal Server Error{% endblock %}
+{% block content %}
+<div class="container text-center mt-5">
+  <div class="jumbotron bg-light p-5 rounded">
+    <h1 class="display-1 text-danger">500</h1>
+    <h2 class="display-4">Internal Server Error</h2>
+    <p class="lead">Sorry, something went wrong on server side.</p>
+    <hr class="my-4">
+    {% if exception %}
+      <p class="text-muted"><small>Reason: {{ exception }}</small></p>
+    {% endif %}
+    <a href="{% url 'index' %}" class="btn btn-primary">Go to Dashboard</a>
+  </div>
+</div>
+{% endblock %}

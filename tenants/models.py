@@ -29,6 +29,8 @@ class User(UserProfile):
         # We access the raw value from __dict__ to avoid recursion caused by the property shadowing the field.
         if self.__dict__.get("is_superuser", False):
             return True
+        if self.is_global_superuser:
+            return True
 
         # 2. If on public schema, we cannot check tenant permissions
         # because the table doesn't exist. Return False.
@@ -49,6 +51,8 @@ class User(UserProfile):
         """
         if self.__dict__.get("is_staff", False):
             return True
+        if self.is_global_staff:
+            return True
         if connection.schema_name == "public":
             return False
         return cast(bool, super().is_staff)
@@ -64,6 +68,8 @@ class User(UserProfile):
         """
         if self.__dict__.get("is_superuser", False):
             return True
+        if self.is_global_superuser:
+            return True
         if connection.schema_name == "public":
             return False
         return super().has_perm(perm, obj)
@@ -74,6 +80,8 @@ class User(UserProfile):
         A global superuser always has all permissions.
         """
         if self.__dict__.get("is_superuser", False):
+            return True
+        if self.is_global_superuser:
             return True
         if connection.schema_name == "public":
             return False
@@ -89,6 +97,14 @@ class User(UserProfile):
     last_name = models.CharField(max_length=30, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
+    is_global_superuser = models.BooleanField(
+        default=False,
+        help_text="Designates that this user has all permissions across all tenants.",
+    )
+    is_global_staff = models.BooleanField(
+        default=False,
+        help_text="Designates whether the user can log into the admin site.",
+    )
 
     def __str__(self) -> str:
         return f"{self.email} ({self.get_role_display()})"  # type: ignore[attr-defined]

@@ -170,6 +170,12 @@ class TenantUserListView(TenantAdminRequiredMixin, ListView):
     context_object_name = "users"
 
     def get_queryset(self):
+        # On public schema, global superusers should see all users
+        if connection.schema_name == "public" and getattr(
+            self.request.user, "is_global_superuser", False
+        ):
+            return User.objects.all().order_by("email")
+
         return User.objects.filter(tenants__schema_name=connection.schema_name)
 
     def get_context_data(self, **kwargs) -> dict[str, Any]:
@@ -401,6 +407,12 @@ class UserEditView(TenantAdminRequiredMixin, UpdateView):
     fields: list[str] = ["first_name", "last_name", "role"]
 
     def get_queryset(self) -> BaseManager[User]:
+        # On public schema, global superusers can edit any user
+        if connection.schema_name == "public" and getattr(
+            self.request.user, "is_global_superuser", False
+        ):
+            return User.objects.all()
+
         # Only show users in current tenant
         return User.objects.filter(tenants=connection.tenant)
 

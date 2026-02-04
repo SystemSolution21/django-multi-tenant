@@ -10,6 +10,16 @@ class TenantAdminSite(admin.AdminSite):
     site_title = "SaaS Admin Portal"
     index_title = "Dashboard"
 
+    def each_context(self, request: HttpRequest):
+        context = super().each_context(request)
+
+        tenant = getattr(request, "tenant", None)
+        if tenant:
+            context["site_header"] = f"{tenant.name} Administration"
+            context["site_title"] = f"{tenant.name} Admin Portal"
+
+        return context
+
     def get_app_list(self, request: HttpRequest):
         """
         Return a sorted list of all the installed apps that have been
@@ -17,8 +27,8 @@ class TenantAdminSite(admin.AdminSite):
         """
         app_list = super().get_app_list(request)
 
-        # If superuser, show everything
-        if request.user.is_superuser:
+        # If global superuser, show everything
+        if getattr(request.user, "is_global_superuser", False):
             return app_list
 
         # For Tenant Admins (non-superusers), filter out restricted models
@@ -35,8 +45,8 @@ class TenantAdminSite(admin.AdminSite):
                     app["models"] = allowed_models
                     new_app_list.append(app)
 
-            # Hide 'Auth' app (Groups) entirely for tenant admins
-            elif app["app_label"] == "auth":
+            # Hide 'Auth' app (Groups) and 'Blog' (Shared app) entirely for tenant admins
+            elif app["app_label"] in ["auth", "blog"]:
                 continue
 
             else:

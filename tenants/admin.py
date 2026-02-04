@@ -73,7 +73,7 @@ class UserAdminForm(forms.ModelForm):
         if connection.schema_name == "public":
             # On public schema, update the global flags directly in the DB
             User.objects.filter(pk=user.pk).update(
-                is_staff=is_staff, is_superuser=is_superuser
+                is_global_staff=is_staff, is_global_superuser=is_superuser
             )
         elif commit:
             # On a tenant schema, update the tenant-specific permissions
@@ -136,6 +136,37 @@ class UserAdmin(admin.ModelAdmin):
             },
         ),
     ]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # If we are in a tenant schema (not public), filter users to only those in this tenant
+        if connection.schema_name != "public":
+            return qs.filter(tenants__schema_name=connection.schema_name)
+        return qs
+
+    def has_change_permission(self, request, obj=None):
+        if not super().has_change_permission(request, obj):
+            return False
+        # Prevent tenant admins from editing global superusers
+        if (
+            obj
+            and obj.is_global_superuser
+            and not getattr(request.user, "is_global_superuser", False)
+        ):
+            return False
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        if not super().has_delete_permission(request, obj):
+            return False
+        # Prevent tenant admins from deleting global superusers
+        if (
+            obj
+            and obj.is_global_superuser
+            and not getattr(request.user, "is_global_superuser", False)
+        ):
+            return False
+        return True
 
     def get_readonly_fields(self, request, obj=None) -> list[str]:
         if request.user.is_superuser:

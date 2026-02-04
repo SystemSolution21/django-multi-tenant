@@ -23,7 +23,9 @@ class TenantAdminRequiredMixin(LoginRequiredMixin):
 
         # This mixin is for tenant-specific views. It should not be used on the public schema.
         # A global superuser will pass the check below, but this prevents misuse.
-        if connection.schema_name == "public":
+        if connection.schema_name == "public" and not getattr(
+            request.user, "is_global_superuser", False
+        ):
             raise PermissionDenied("This page is not accessible on the public domain.")
 
         # In a tenant schema, the `user.is_superuser` property from `django-tenant-users`
@@ -49,7 +51,9 @@ class TenantStaffRequiredMixin(UserPassesTestMixin):
             return False
 
         # This mixin is for tenant-specific views.
-        if connection.schema_name == "public":
+        if connection.schema_name == "public" and not getattr(
+            user, "is_global_staff", False
+        ):
             return False
 
         # The user.is_staff property from django-tenant-users handles both

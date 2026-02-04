@@ -17,14 +17,20 @@ from core.views import index_view
 from tasks.views import ProjectViewSet, TaskViewSet
 from tenants.views import TenantViewSet
 
+
+# Define a read-only viewset for Blog Articles in tenant context
+class TenantArticleViewSet(ArticleViewSet):
+    http_method_names = ["get", "head", "options"]
+
+
 # Register api viewsets routes
 router = DefaultRouter()
-router.register(prefix="blog", viewset=ArticleViewSet)
+router.register(prefix="blog", viewset=TenantArticleViewSet)
 router.register(prefix="projects", viewset=ProjectViewSet)
 router.register(prefix="tasks", viewset=TaskViewSet)
 router.register(prefix="tenants", viewset=TenantViewSet)
 
-# Register URLs
+# Register web UI URLs
 urlpatterns: list[Any] = [
     path(route="", view=index_view, name="index"),
     path(route="api/", view=include(router.urls)),

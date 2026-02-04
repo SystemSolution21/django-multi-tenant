@@ -19,7 +19,7 @@ class Command(BaseCommand):
             # Find users who are not associated with any tenant
             # We exclude superusers to prevent accidental lockout if they were created manually without a tenant
             orphaned_users = User.objects.filter(
-                tenants__isnull=True, is_superuser=False
+                tenants__isnull=True, is_global_superuser=False
             )
 
             count = orphaned_users.count()

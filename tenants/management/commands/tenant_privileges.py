@@ -54,10 +54,12 @@ class Command(BaseCommand):
 
         # 1. Update Global User properties
         # Use update() to modify the DB columns directly, bypassing the read-only properties.
-        # We set is_superuser=False (demote global admin) and is_staff=True (allow admin access).
-        User.objects.filter(pk=user.pk).update(is_superuser=False, is_staff=True)
+        # We set is_global_superuser=False (demote global admin) and is_global_staff=True (allow admin access).
+        User.objects.filter(pk=user.pk).update(
+            is_global_superuser=False, is_global_staff=True
+        )
 
-        # Update the global role based on the command flags
+        # Update the role based on the command flags
         if set_tenant_admin:
             user.role = "admin"
         elif set_tenant_regular:
@@ -65,7 +67,9 @@ class Command(BaseCommand):
 
         # Only update the role field to avoid overwriting the is_superuser/is_staff changes
         user.save(update_fields=["role"])
-        self.stdout.write("Global User updated: is_superuser=False, is_staff=True")
+        self.stdout.write(
+            "Global User updated: is_global_superuser=False, is_global_staff=True (Demoted from Global Admin)"
+        )
 
         # 2. Assign specific permissions INSIDE the tenant context
         with schema_context(tenant.schema_name):
@@ -75,7 +79,9 @@ class Command(BaseCommand):
                 utp.is_superuser = True
                 utp.is_staff = True
                 utp.user_permissions.clear()  # Clear specific permissions if they are a tenant superuser
-                self.stdout.write(f"Set '{email}' as tenant admin for '{schema_name}'.")
+                self.stdout.write(
+                    f"Tenant Permissions: Set '{email}' as ADMIN for tenant '{schema_name}'."
+                )
             else:  # This covers both --set-tenant-regular and the default case
                 utp.is_superuser = False
                 utp.is_staff = True
@@ -89,11 +95,11 @@ class Command(BaseCommand):
 
                 if set_tenant_regular:
                     self.stdout.write(
-                        f"Set '{email}' as regular tenant user for '{schema_name}' with Task/Project permissions."
+                        f"Tenant Permissions: Set '{email}' as REGULAR USER for tenant '{schema_name}' with Task/Project permissions."
                     )
                 else:  # Default case message
                     self.stdout.write(
-                        f"Default: Set '{email}' as regular tenant user for '{schema_name}' with Task/Project permissions."
+                        f"Tenant Permissions (Default): Set '{email}' as REGULAR USER for tenant '{schema_name}' with Task/Project permissions."
                     )
 
             utp.save()

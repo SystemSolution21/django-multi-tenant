@@ -2,7 +2,7 @@
 
 # Import standard libraries
 import json
-from typing import Any, cast
+from typing import Any
 
 # Import django libraries
 from django.conf import settings
@@ -14,7 +14,6 @@ from django.db import transaction
 from psycopg2 import connect, errors, sql
 from psycopg2.extensions import connection, cursor
 from tenant_users.tenants.tasks import provision_tenant
-from tenant_users.tenants.models import UserProfileManager
 
 # Import local modules
 from tenants.models import Domain, User, Tenant
@@ -131,19 +130,20 @@ class Command(BaseCommand):
         # calling `add_user` which tries to create a UserTenantPermissions
         # record in the public schema (where the table doesn't exist).
         with transaction.atomic():
-            # Use the canonical `create_superuser` method to ensure all flags are set correctly.
-            user_manager = cast(UserProfileManager, User.objects)
-            public_owner = cast(
-                User,
-                user_manager.create_superuser(
-                    email=public_tenant_data["owner"]["email"],
-                    password=public_tenant_data["owner"]["password"],
-                ),
+            # Manually create the public tenant owner.
+            # We cannot use create_superuser here because:
+            # 1. It requires the public tenant to exist (circular dependency).
+            # 2. It tries to add tenant permissions, which don't exist in the public schema.
+            public_owner = User(
+                email=public_tenant_data["owner"]["email"],
+                is_active=True,
+                is_verified=True,
+                role="admin",
+                is_global_superuser=True,
+                is_global_staff=True,
             )
-            # Set our custom fields and save them.
-            public_owner.is_verified = True
-            public_owner.role = "admin"
-            public_owner.save(update_fields=["is_verified", "role"])
+            public_owner.set_password(public_tenant_data["owner"]["password"])
+            public_owner.save()
 
             # Create the public tenant instance
             public_tenant = Tenant.objects.create(

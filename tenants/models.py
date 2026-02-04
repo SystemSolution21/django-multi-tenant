@@ -129,7 +129,7 @@ class UserInvitation(TimeStampedModel):
     expires_at = models.DateTimeField()
 
     class Meta:
-        unique_together: list[str] = ["tenant", "email"]
+        unique_together = (("tenant", "email"),)
 
     def save(self, *args, **kwargs) -> None:
         if not self.expires_at:

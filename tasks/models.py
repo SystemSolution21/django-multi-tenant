@@ -27,7 +27,7 @@ class Project(TimeStampedModel):
         indexes = [
             models.Index(fields=["key"], name="project_key_idx"),
         ]
-        ordering: list[str] = ["-created_at"]
+        ordering = ["-created_at"]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.key})"

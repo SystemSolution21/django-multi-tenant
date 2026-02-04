@@ -20,14 +20,14 @@ class TenantAdminSite(admin.AdminSite):
 
         return context
 
-    def get_app_list(self, request: HttpRequest):
+    def get_app_list(self, request: HttpRequest, app_label: str | None = None):
         """
         Return a sorted list of all the installed apps that have been
         registered in this site.
         """
-        app_list = super().get_app_list(request)
+        app_list = super().get_app_list(request, app_label)  # type: ignore[call-arg]
 
-        # If global superuser, show everything
+        # For global superuser, show everything
         if getattr(request.user, "is_global_superuser", False):
             return app_list
 

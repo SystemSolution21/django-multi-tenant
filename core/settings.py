@@ -63,8 +63,6 @@ SHARED_APPS = [
 
 # Application definition (tenant apps only)
 TENANT_APPS = [
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
     "tenant_users.permissions",  # django-tenant-users
     "tasks.apps.TasksConfig",  # local tasks app
 ]

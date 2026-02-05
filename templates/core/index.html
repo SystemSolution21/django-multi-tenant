@@ -26,6 +26,28 @@
           <a class="btn btn-secondary btn-lg" href="/admin/" role="button">
               SaaS Administration
           </a>
+        {% elif user.is_authenticated %}
+          <p class="lead">Welcome back, {{ user.email }}!</p>
+          <p>Select an organization to access your dashboard:</p>
+          <div class="list-group w-50">
+            {% for tenant in user.tenants.all %}
+              {% if tenant.schema_name != 'public' %}
+                {% with domain=tenant.domains.first %}
+                  {% if domain %}
+                    <a href="//{{ domain.domain }}:8000/" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                      <div>
+                        {{ tenant.name }}
+                        {% if tenant.owner == user %}<span class="badge bg-info text-dark ms-2">Owner</span>{% endif %}
+                      </div>
+                      <span class="badge bg-primary rounded-pill">Go</span>
+                    </a>
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
+            {% empty %}
+              <div class="alert alert-warning">You are not a member of any organizations.</div>
+            {% endfor %}
+          </div>
         {% endif %}
       </div>
       <!-- public stats -->

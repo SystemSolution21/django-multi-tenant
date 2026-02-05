@@ -117,6 +117,23 @@ class User(UserProfile):
 class Tenant(TenantBase, TimeStampedModel):
     name = models.CharField(max_length=100)
 
+    def add_user(self, user_obj, is_superuser=False, is_staff=False):
+        """
+        Override add_user to skip creating UserTenantPermissions for the public tenant,
+        as the table does not exist in the public schema.
+        """
+        if self.schema_name == "public":
+            return None
+        return super().add_user(user_obj, is_superuser=is_superuser, is_staff=is_staff)
+
+    def remove_user(self, user_obj):
+        """
+        Override remove_user to skip removing UserTenantPermissions for the public tenant.
+        """
+        if self.schema_name == "public":
+            return None
+        return super().remove_user(user_obj)
+
 
 class Domain(DomainMixin, TimeStampedModel):
     pass

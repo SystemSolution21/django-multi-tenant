@@ -134,13 +134,14 @@ DATABASES = {
 # Django-tenants settings
 DATABASE_ROUTERS = ["django_tenants.routers.TenantSyncRouter"]
 
-# Allow session cookies to be shared across subdomains (e.g., demo1.localhost and localhost)
-# Note: This requires to access the site via 'localhost' or '.localhost', not '127.0.0.1'
-# SESSION_COOKIE_DOMAIN = ".localhost"
-
 # Show public tenant (no other tenant found)
 SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
-BASE_DOMAIN = "localhost"
+
+BASE_DOMAIN = os.getenv("BASE_DOMAIN", "lvh.me")
+
+# Allow session cookies to be shared across subdomains (e.g., demo1.localhost and demo2.localhost)
+# This requires to access the site via BASE_DOMAIN
+SESSION_COOKIE_DOMAIN = f".{BASE_DOMAIN}"
 
 PUBLIC_SCHEMA_NAME = "public"
 

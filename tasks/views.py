@@ -2,6 +2,8 @@
 
 # Import django libraries
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import get_user_model
+from django.db import connection
 from django.db.models import Q, QuerySet
 from django.db.models.manager import BaseManager
 from django.urls import reverse_lazy
@@ -82,6 +84,15 @@ class ProjectCreateView(LoginRequiredMixin, TenantSchemaRequiredMixin, CreateVie
     fields = ["key", "name", "description", "owner"]
     success_url = reverse_lazy("project_list")
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        User = get_user_model()
+        if connection.schema_name != "public":
+            form.fields["owner"].queryset = User.objects.filter(
+                tenants__schema_name=connection.schema_name
+            )
+        return form
+
     def form_valid(self, form):
         # Set the owner to current user if not specified
         if not form.instance.owner:
@@ -96,6 +107,15 @@ class ProjectUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateVie
     template_name = "tasks/project_form.html"
     fields = ["key", "name", "description", "owner"]
     success_url = reverse_lazy("project_list")
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        User = get_user_model()
+        if connection.schema_name != "public":
+            form.fields["owner"].queryset = User.objects.filter(
+                tenants__schema_name=connection.schema_name
+            )
+        return form
 
 
 class ProjectDeleteView(LoginRequiredMixin, TenantSchemaRequiredMixin, DeleteView):
@@ -146,6 +166,15 @@ class TaskListView(LoginRequiredMixin, TenantSchemaRequiredMixin, ListView):
 
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        User = get_user_model()
+        if connection.schema_name != "public":
+            context["users"] = User.objects.filter(
+                tenants__schema_name=connection.schema_name
+            )
+        return context
+
 
 class TaskDetailView(LoginRequiredMixin, TenantSchemaRequiredMixin, DetailView):
     """Show task details."""
@@ -174,6 +203,15 @@ class TaskCreateView(LoginRequiredMixin, TenantSchemaRequiredMixin, CreateView):
     ]
     success_url = reverse_lazy("task_list")
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        User = get_user_model()
+        if connection.schema_name != "public":
+            form.fields["assignee"].queryset = User.objects.filter(
+                tenants__schema_name=connection.schema_name
+            )
+        return form
+
 
 class TaskUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateView):
     """Update an existing task."""
@@ -190,6 +228,15 @@ class TaskUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateView):
         "due_date",
     ]
     success_url = reverse_lazy("task_list")
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        User = get_user_model()
+        if connection.schema_name != "public":
+            form.fields["assignee"].queryset = User.objects.filter(
+                tenants__schema_name=connection.schema_name
+            )
+        return form
 
 
 class TaskDeleteView(LoginRequiredMixin, TenantSchemaRequiredMixin, DeleteView):

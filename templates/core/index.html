@@ -34,7 +34,7 @@
               {% if tenant.schema_name != 'public' %}
                 {% with domain=tenant.domains.first %}
                   {% if domain %}
-                    <a href="//{{ domain.domain }}:8000/" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <a href="//{{ domain.domain }}{% if request.get_port != '80' and request.get_port != '443' %}:{{ request.get_port }}{% endif %}/" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                       <div>
                         {{ tenant.name }}
                         {% if tenant.owner == user %}<span class="badge bg-info text-dark ms-2">Owner</span>{% endif %}

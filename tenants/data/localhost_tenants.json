@@ -5,8 +5,8 @@
     "schema_name": "public",
     "subdomain": "",
     "owner": {
-      "username": "admin@lvh.me",
-      "email": "admin@lvh.me",
+      "username": "admin@localhost",
+      "email": "admin@localhost",
       "password": "password"
     }
   },
@@ -16,8 +16,8 @@
     "schema_name": "demo1",
     "subdomain": "demo1",
     "owner": {
-      "username": "admin@demo1.lvh.me",
-      "email": "admin@demo1.lvh.me",
+      "username": "admin@demo1.localhost",
+      "email": "admin@demo1.localhost",
       "password": "password"
     }
   },
@@ -27,8 +27,8 @@
     "schema_name": "demo2",
     "subdomain": "demo2",
     "owner": {
-      "username": "admin@demo2.lvh.me",
-      "email": "admin@demo2.lvh.me",
+      "username": "admin@demo2.localhost",
+      "email": "admin@demo2.localhost",
       "password": "password"
     }
   }

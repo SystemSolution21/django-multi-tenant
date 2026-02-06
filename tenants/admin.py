@@ -1,40 +1,21 @@
 # tenants/admin.py
 
 # Import standard libraries
-from typing import Any, Literal, cast
 
 # Import django libraries
 from django import forms
 from django.contrib import admin
-from django.core.exceptions import ValidationError
-from django.db import ProgrammingError, connection, models
+from django.contrib import messages
+from django.db import connection
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.urls import reverse
 from django_tenants.admin import TenantAdminMixin
-from django_tenants.utils import schema_context
 from tenant_users.permissions.models import UserTenantPermissions
 
 # Import local modules
 from tenants.models import Domain, Tenant, User
-from tasks.models import Project, Task
-
-
-def table_exists(table_name) -> Any | Literal[False]:
-    """
-    Check if a table exists in the current schema.
-    """
-    with connection.cursor() as cursor:
-        cursor.execute(
-            sql="""
-            SELECT EXISTS (
-                SELECT 1
-                FROM information_schema.tables
-                WHERE table_schema = current_schema()
-                AND table_name = %s
-            )
-            """,
-            params=[table_name],
-        )
-        result: tuple[Any, ...] | None = cursor.fetchone()
-        return result[0] if result else False
+from tenants.utils import delete_user_globally
 
 
 class UserAdminForm(forms.ModelForm):
@@ -174,57 +155,51 @@ class UserAdmin(admin.ModelAdmin):
         return ["is_staff", "is_superuser"]
 
     def delete_model(self, request, obj: User) -> None:
-        # Cancel the delete if the user owns any tenant
-        if Tenant.objects.filter(owner=obj).exists():
-            raise ValidationError(
-                message="You cannot delete a user that is a tenant owner."
-            )
+        delete_user_globally(obj)
 
-        # Before deleting the user, we must manually clean up any ForeignKeys
-        # from tenant-specific models that point to this user.
-        # Django's default delete collector runs in the 'public' schema and
-        # cannot see the tables in tenant schemas. We must iterate through ALL
-        # tenants, not just the ones the user belongs to, because the user
-        # might have been removed from a tenant but objects they created could
-        # still reference them.
-        all_tenants = Tenant.objects.exclude(schema_name="public")
-        for tenant in all_tenants:
-            with schema_context(tenant.schema_name):
-                try:
-                    # Nullify the 'owner' field for Projects and 'assignee' for Tasks
-                    if table_exists(table_name=Project._meta.db_table):
-                        Project.objects.filter(owner=obj).update(owner=None)
-                    if table_exists(table_name=Task._meta.db_table):
-                        Task.objects.filter(assignee=obj).update(assignee=None)
-                except ProgrammingError:
-                    # This can happen if the tables don't exist in a particular
-                    # schema, which is unlikely but possible in complex setups
-                    # or during migrations. We can safely ignore it.
-                    pass
+    def delete_view(self, request, object_id, extra_context=None):
+        # If we are on public schema, standard deletion analysis fails because
+        # UserTenantPermissions table is missing.
+        # We bypass the collector check and go straight to confirmation/deletion.
+        if connection.schema_name == "public":
+            obj = self.get_object(request, object_id)
+            if obj is None:
+                msg = f'{self.opts.verbose_name} with ID "{object_id}" doesn\'t exist. Perhaps it was deleted?'
+                self.message_user(request, msg, messages.WARNING)
+                url = reverse(
+                    "admin:%s_%s_changelist"
+                    % (self.opts.app_label, self.opts.model_name),
+                    current_app=self.admin_site.name,
+                )
+                return HttpResponseRedirect(url)
 
-        # Temporarily disable on_delete behavior for tenant-specific models
-        # to prevent Django from trying to update non-existent tables in public schema.
-        project_owner_field: models.ForeignKey[Any] = cast(
-            models.ForeignKey, Project._meta.get_field(field_name="owner")
-        )
-        task_assignee_field: models.ForeignKey[Any] = cast(
-            models.ForeignKey, Task._meta.get_field(field_name="assignee")
-        )
+            if request.method == "POST":
+                self.delete_model(request, obj)
+                self.message_user(
+                    request, "User deleted successfully.", messages.SUCCESS
+                )
+                url = reverse(
+                    "admin:%s_%s_changelist"
+                    % (self.opts.app_label, self.opts.model_name),
+                    current_app=self.admin_site.name,
+                )
+                return HttpResponseRedirect(url)
 
-        original_project_on_delete: Any = project_owner_field.on_delete  # type: ignore
-        original_task_on_delete: Any = task_assignee_field.on_delete  # type: ignore
+            # GET request - show simple confirmation
+            context = {
+                **self.admin_site.each_context(request),
+                "object": obj,
+                "opts": self.opts,
+                "title": "Are you sure?",
+                "deleted_objects": [
+                    "User and all their permissions across tenants"
+                ],  # Fake list
+                "perms_lacking": [],
+                "protected": [],
+            }
+            return render(request, "admin/delete_confirmation.html", context)
 
-        try:
-            # Tell the collector to do nothing for these relationships.
-            # We've already handled the data cleanup in the loop above.
-            project_owner_field.on_delete = models.DO_NOTHING  # type: ignore[misc]
-            task_assignee_field.on_delete = models.DO_NOTHING  # type: ignore[misc]
-            # Now, this deletion will succeed from the public schema.
-            User.objects.delete_user(obj)  # type: ignore[call-arg]
-        finally:
-            # Always restore the original on_delete behavior.
-            project_owner_field.on_delete = original_project_on_delete  # type: ignore[misc]
-            task_assignee_field.on_delete = original_task_on_delete  # type: ignore[misc]
+        return super().delete_view(request, object_id, extra_context)
 
 
 @admin.register(Tenant)
@@ -236,8 +211,8 @@ class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
     search_fields: list[str] = ["name", "schema_name"]
 
     def delete_model(self, request, obj) -> None:
-        # Force delete the tenant
-        obj.delete_tenant()
+        # Force delete the tenant, bypassing django-tenant-users safety checks
+        obj.delete(force_drop=True)
 
 
 @admin.register(Domain)

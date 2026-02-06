@@ -59,6 +59,9 @@
                   {% if user != request.user %}
                     <a href="{% url 'user_delete' user.pk %}" class="btn btn-sm btn-outline-danger">Remove</a>
                   {% endif %}
+                  {% if request.user == request.tenant.owner %}
+                      <a href="{% url 'tenant_transfer_ownership' %}" class="btn btn-warning" hidden="hidden">Transfer Ownership</a>
+                  {% endif %}
                 </td>
               </tr>
             {% empty %}

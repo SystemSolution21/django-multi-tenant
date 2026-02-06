@@ -1,7 +1,10 @@
 # tenants/utils.py
 
 # Import standard libraries
-from typing import Any, Tuple
+from typing import Any, Tuple, cast
+from django.core.exceptions import ValidationError
+from django.db import connection, models, ProgrammingError
+from django.db.models.fields.reverse_related import ManyToOneRel
 
 # Import django libraries
 from django.db import transaction
@@ -10,9 +13,11 @@ from django_tenants.utils import schema_context
 
 # Import third-party libraries
 from tenant_users.tenants.tasks import provision_tenant
+from tenant_users.permissions.models import UserTenantPermissions
 
 # Import local modules
 from tenants.models import Domain, Tenant, User
+from tasks.models import Project, Task
 
 
 def create_tenant(tenant_data: dict[str, Any]) -> Tuple[Tenant, Domain]:
@@ -124,3 +129,93 @@ def get_public_domain_url(request: HttpRequest) -> str | None:
         # Fails silently if public tenant or domain is not set up
         pass
     return public_domain_url
+
+
+def table_exists(table_name):
+    """
+    Check if a table exists in the current schema.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            sql="""
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = current_schema()
+                AND table_name = %s
+            )
+            """,
+            params=[table_name],
+        )
+        result: tuple[Any, ...] | None = cursor.fetchone()
+        return result[0] if result else False
+
+
+def delete_user_globally(user: User) -> None:
+    """
+    Safely delete a user from the system, cleaning up tenant references.
+    """
+    # Prevent deleting the owner of the public tenant
+    with schema_context("public"):
+        public_tenant = Tenant.objects.filter(schema_name="public").first()
+        if public_tenant and public_tenant.owner == user:
+            raise ValidationError(
+                message=f"You cannot delete the owner of the {public_tenant.name}."
+            )
+
+    # Automatically delete any other tenants owned by this user
+    for tenant in Tenant.objects.filter(owner=user):
+        tenant.delete_tenant()
+
+    # Before deleting the user, we must manually clean up any ForeignKeys
+    # from tenant-specific models that point to this user.
+    all_tenants = Tenant.objects.exclude(schema_name="public")
+    for tenant in all_tenants:
+        with schema_context(tenant.schema_name):
+            try:
+                # Nullify the 'owner' field for Projects and 'assignee' for Tasks
+                if table_exists(table_name=Project._meta.db_table):
+                    Project.objects.filter(owner=user).update(owner=None)
+                if table_exists(table_name=Task._meta.db_table):
+                    Task.objects.filter(assignee=user).update(assignee=None)
+                # Delete UserTenantPermissions for this user to prevent integrity errors
+                if table_exists(table_name=UserTenantPermissions._meta.db_table):
+                    UserTenantPermissions.objects.filter(profile=user).delete()
+            except ProgrammingError:
+                pass
+
+    # Temporarily disable on_delete behavior for tenant-specific models
+    project_owner_field = cast(
+        models.ForeignKey, Project._meta.get_field(field_name="owner")
+    )
+    task_assignee_field = cast(
+        models.ForeignKey, Task._meta.get_field(field_name="assignee")
+    )
+    utp_profile_field = cast(
+        models.ForeignKey, UserTenantPermissions._meta.get_field(field_name="profile")
+    )
+
+    # Cast remote_field to ManyToOneRel to satisfy type checker regarding on_delete
+    project_owner_rel = cast(ManyToOneRel, project_owner_field.remote_field)
+    task_assignee_rel = cast(ManyToOneRel, task_assignee_field.remote_field)
+    utp_profile_rel = cast(ManyToOneRel, utp_profile_field.remote_field)
+
+    original_project_on_delete = project_owner_rel.on_delete
+    original_task_on_delete = task_assignee_rel.on_delete
+    original_utp_on_delete = utp_profile_rel.on_delete
+
+    try:
+        # Tell the collector to do nothing for these relationships.
+        project_owner_rel.on_delete = models.DO_NOTHING
+        task_assignee_rel.on_delete = models.DO_NOTHING
+        utp_profile_rel.on_delete = models.DO_NOTHING
+        # This is the correct hard delete from Django, which will now succeed
+        # because we have manually cleaned up cross-schema references.
+        # We use filter().delete() to bypass django-tenant-users' safety check
+        # which raises DeleteError on instance.delete().
+        User.objects.filter(pk=user.pk).delete()
+    finally:
+        # Always restore the original on_delete behavior.
+        project_owner_rel.on_delete = original_project_on_delete
+        task_assignee_rel.on_delete = original_task_on_delete
+        utp_profile_rel.on_delete = original_utp_on_delete

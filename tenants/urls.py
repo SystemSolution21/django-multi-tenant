@@ -18,6 +18,7 @@ from tenants.views import (
     UserEditView,
     UserInviteView,
     UserRemoveView,
+    TenantTransferOwnershipView,
     PublicBlogSearchView,
     TenantSearchJSONView,
 )
@@ -39,6 +40,11 @@ urlpatterns: list[Any] = [
         route="users/<int:pk>/remove/",
         view=UserRemoveView.as_view(),
         name="user_delete",
+    ),
+    path(
+        route="users/transfer-ownership/",
+        view=TenantTransferOwnershipView.as_view(),
+        name="tenant_transfer_ownership",
     ),
     path(
         route="invitations/<uuid:token>/accept/",

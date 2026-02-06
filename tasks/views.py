@@ -1,11 +1,14 @@
 # tasks/views.py
 
+# Import standard libraries
+from typing import TYPE_CHECKING, cast
+
 # Import django libraries
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.models import Q, QuerySet
-from django.db.models.manager import BaseManager
+from django.forms import ModelChoiceField
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -32,7 +35,7 @@ class ProjectViewSet(ModelViewSet):
     A viewset for the Project model (API).
     """
 
-    queryset: BaseManager[Project] = Project.objects.all()
+    queryset: QuerySet[Project] = Project.objects.all()
     serializer_class = ProjectSerializer
 
 
@@ -41,7 +44,7 @@ class TaskViewSet(ModelViewSet):
     A viewset for the Task model (API).
     """
 
-    queryset: BaseManager[Task] = Task.objects.select_related("project").all()
+    queryset: QuerySet[Task] = Task.objects.select_related("project").all()
     serializer_class = TaskSerializer
 
 
@@ -65,6 +68,9 @@ class ProjectListView(LoginRequiredMixin, TenantSchemaRequiredMixin, ListView):
 class ProjectDetailView(LoginRequiredMixin, TenantSchemaRequiredMixin, DetailView):
     """Show project details and its tasks."""
 
+    if TYPE_CHECKING:
+        object: Project
+
     model = Project
     template_name = "tasks/project_detail.html"
     context_object_name = "project"
@@ -72,7 +78,9 @@ class ProjectDetailView(LoginRequiredMixin, TenantSchemaRequiredMixin, DetailVie
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Get tasks for this project
-        context["tasks"] = self.object.tasks.select_related("assignee").all()
+        context["tasks"] = Task.objects.filter(project=self.object).select_related(
+            "assignee"
+        )
         return context
 
 
@@ -88,7 +96,8 @@ class ProjectCreateView(LoginRequiredMixin, TenantSchemaRequiredMixin, CreateVie
         form = super().get_form(form_class)
         User = get_user_model()
         if connection.schema_name != "public":
-            form.fields["owner"].queryset = User.objects.filter(
+            owner_field = cast(ModelChoiceField, form.fields["owner"])
+            owner_field.queryset = User.objects.filter(
                 tenants__schema_name=connection.schema_name
             )
         return form
@@ -112,7 +121,8 @@ class ProjectUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateVie
         form = super().get_form(form_class)
         User = get_user_model()
         if connection.schema_name != "public":
-            form.fields["owner"].queryset = User.objects.filter(
+            owner_field = cast(ModelChoiceField, form.fields["owner"])
+            owner_field.queryset = User.objects.filter(
                 tenants__schema_name=connection.schema_name
             )
         return form
@@ -207,7 +217,8 @@ class TaskCreateView(LoginRequiredMixin, TenantSchemaRequiredMixin, CreateView):
         form = super().get_form(form_class)
         User = get_user_model()
         if connection.schema_name != "public":
-            form.fields["assignee"].queryset = User.objects.filter(
+            assignee_field = cast(ModelChoiceField, form.fields["assignee"])
+            assignee_field.queryset = User.objects.filter(
                 tenants__schema_name=connection.schema_name
             )
         return form
@@ -233,7 +244,8 @@ class TaskUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateView):
         form = super().get_form(form_class)
         User = get_user_model()
         if connection.schema_name != "public":
-            form.fields["assignee"].queryset = User.objects.filter(
+            assignee_field = cast(ModelChoiceField, form.fields["assignee"])
+            assignee_field.queryset = User.objects.filter(
                 tenants__schema_name=connection.schema_name
             )
         return form

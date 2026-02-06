@@ -24,7 +24,7 @@ class TenantUserFilter(admin.SimpleListFilter):
         if connection.schema_name != "public":
             # Get users who are members of the current tenant
             users = User.objects.filter(tenants__schema_name=connection.schema_name)
-            return [(u.id, u.email) for u in users]
+            return [(u.pk, u.email) for u in users]
         return []
 
     def queryset(self, request, queryset):

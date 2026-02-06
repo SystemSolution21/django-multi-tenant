@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 # Import django libraries
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import connection
 from django.db.models import Q
@@ -31,7 +32,7 @@ from rest_framework.permissions import IsAuthenticated
 from tenants.mixins import TenantAdminRequiredMixin
 from tenants.models import Domain, Tenant, User, UserInvitation
 from tenants.serializers import TenantSerializer
-from tenants.utils import create_tenant
+from tenants.utils import create_tenant, delete_user_globally
 from blog.models import Article
 from tasks.models import Project, Task
 
@@ -110,6 +111,9 @@ class TenantDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     Delete a tenant.
     """
 
+    if TYPE_CHECKING:
+        object: Tenant
+
     model = Tenant
     template_name = "tenants/tenant_confirm_delete.html"
     success_url: Any = reverse_lazy("tenant_list")
@@ -137,6 +141,66 @@ class TenantSelfUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     def get_object(self) -> Tenant:
         # Get current tenant from schema context
         return Tenant.objects.get(schema_name=connection.schema_name)
+
+
+class TenantTransferOwnershipView(TenantAdminRequiredMixin, View):
+    """
+    Transfer tenant ownership to another existing member.
+    """
+
+    template_name = "tenants/tenant_transfer_ownership.html"
+
+    def get(self, request, *args, **kwargs):
+        tenant = Tenant.objects.get(schema_name=connection.schema_name)
+
+        # Security check: Only owner can transfer
+        if tenant.owner != request.user:
+            messages.error(request, "Only the tenant owner can transfer ownership.")
+            return redirect("user_list")
+
+        # Get potential owners (all users except current owner)
+        potential_owners = User.objects.filter(
+            tenants__schema_name=connection.schema_name
+        ).exclude(pk=request.user.pk)
+
+        return render(
+            request,
+            self.template_name,
+            {"tenant": tenant, "potential_owners": potential_owners},
+        )
+
+    def post(self, request, *args, **kwargs):
+        tenant = Tenant.objects.get(schema_name=connection.schema_name)
+
+        if tenant.owner != request.user:
+            messages.error(request, "Only the tenant owner can transfer ownership.")
+            return redirect("user_list")
+
+        new_owner_id = request.POST.get("new_owner")
+        if not new_owner_id:
+            messages.error(request, "Please select a user.")
+            return redirect("tenant_transfer_ownership")
+
+        try:
+            new_owner = User.objects.get(
+                pk=new_owner_id, tenants__schema_name=connection.schema_name
+            )
+        except User.DoesNotExist:
+            messages.error(request, "User not found in this tenant.")
+            return redirect("tenant_transfer_ownership")
+
+        # Perform transfer
+        tenant.owner = new_owner
+        tenant.save()
+
+        # Ensure new owner has max permissions
+        tenant.add_user(new_owner, is_superuser=True, is_staff=True)
+
+        messages.success(
+            request,
+            f"Ownership transferred to {new_owner.email}. You are no longer the owner.",
+        )
+        return redirect("user_list")
 
 
 class IsPublicSuperUser(permissions.BasePermission):
@@ -444,17 +508,36 @@ class UserRemoveView(TenantAdminRequiredMixin, View):
         user: User = cast(User, self.get_object())
         tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
 
-        # Remove user from tenant (keeps user account intact)
-        tenant.remove_user(user_obj=user)
+        if tenant.schema_name == "public":
+            # On public schema, 'removing' a user implies deleting them entirely from the system
+            try:
+                delete_user_globally(user)
+                messages.success(
+                    request=request,
+                    message=f"User {user.email} has been deleted from the system.",
+                )
+            except ValidationError as e:
+                messages.error(request=request, message=str(e))
+        else:
+            # Prevent removing the tenant owner to avoid orphaned tenants
+            if tenant.owner == user:
+                messages.error(
+                    request=request,
+                    message="You cannot remove the owner of the tenant. Please delete the tenant or transfer ownership instead.",
+                )
+                return HttpResponseRedirect(redirect_to=self.success_url)
 
-        # Delete any invitations for this user in this tenant (from public schema)
-        with schema_context("public"):
-            UserInvitation.objects.filter(tenant=tenant, email=user.email).delete()
+            # Remove user from tenant (keeps user account intact)
+            tenant.remove_user(user_obj=user)
 
-        messages.success(
-            request=request,
-            message=f"User {user.email} has been removed from {tenant.name}",
-        )
+            # Delete any invitations for this user in this tenant (from public schema)
+            with schema_context("public"):
+                UserInvitation.objects.filter(tenant=tenant, email=user.email).delete()
+
+            messages.success(
+                request=request,
+                message=f"User {user.email} has been removed from {tenant.name}",
+            )
 
         return HttpResponseRedirect(redirect_to=self.success_url)
 

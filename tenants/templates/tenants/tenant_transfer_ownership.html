@@ -1,0 +1,59 @@
+<!-- tenants/templates/tenants/tenant_transfer_ownership.html -->
+{% extends 'base.html' %}
+{% block title %}Transfer Ownership - {{ tenant.name}}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card border-danger">
+      <div class="card-header bg-danger text-white">
+        <h3 class="mb-0">Transfer Ownership of {{ tenant.name }}</h3>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-warning" role="alert">
+          <h4 class="alert-heading">Warning!</h4>
+          <p>
+            You are about to transfer ownership of this organization.
+            <strong>This action is irreversible.</strong>
+          </p>
+          <hr>
+          <p class="mb-0">
+            Once you transfer ownership, you will no longer be able to manage
+            billing, delete the organization, or transfer ownership again. You
+            will remain a member of the organization with your current role.
+          </p>
+        </div>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="new_owner_select" class="form-label"
+              ><strong>Select New Owner</strong></label
+            >
+            <select 
+              class="form-select" 
+              id="new_owner_select" 
+              name="new_owner" 
+              required 
+              {% if not potential_owners %}disabled{% endif %}
+            >
+              <option value="" selected disabled>Choose a user...</option> 
+              {% for user in potential_owners %}
+              <option value="{{ user.pk }}"> 
+                {{ user.full_name }} ({{ user.email }}) 
+              </option>
+              {% endfor %} 
+            </select>
+          </div>
+          <button
+            type="submit"
+            class="btn btn-danger"
+            {% if not potential_owners %}disabled{% endif %}
+          >
+            I understand, Transfer Ownership
+          </button>
+          <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancel</a> 
+        </form>
+      </div>
+    </div>
+  </div>
+</div> 
+{% endblock %}

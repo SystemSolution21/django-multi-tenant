@@ -30,6 +30,7 @@ from rest_framework.permissions import IsAuthenticated
 
 # Import local modules
 from tenants.mixins import TenantAdminRequiredMixin
+from tenants.forms import TenantForm
 from tenants.models import Domain, Tenant, User, UserInvitation
 from tenants.serializers import TenantSerializer
 from tenants.utils import create_tenant, delete_user_globally
@@ -69,7 +70,7 @@ class TenantCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     """
 
     model = Tenant
-    fields: list[str] = ["name", "schema_name"]
+    form_class = TenantForm
     template_name = "tenants/tenant_form.html"
     success_url: Any = reverse_lazy("tenant_list")
 

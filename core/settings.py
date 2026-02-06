@@ -135,7 +135,7 @@ DATABASES = {
 DATABASE_ROUTERS = ["django_tenants.routers.TenantSyncRouter"]
 
 # Show public tenant (no other tenant found)
-SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
+SHOW_PUBLIC_IF_NO_TENANT_FOUND = False
 
 BASE_DOMAIN = os.getenv("BASE_DOMAIN", "lvh.me")
 
@@ -144,6 +144,19 @@ BASE_DOMAIN = os.getenv("BASE_DOMAIN", "lvh.me")
 SESSION_COOKIE_DOMAIN = f".{BASE_DOMAIN}"
 
 PUBLIC_SCHEMA_NAME = "public"
+
+# Reserved subdomains that cannot be registered by tenants
+TENANT_SUBDOMAIN_RESERVED_NAMES: list[str] = [
+    "public",
+    "www",
+    "admin",
+    "api",
+    "blog",
+    "dashboard",
+    "support",
+    "help",
+    "mail",
+]
 
 AUTH_USER_MODEL = "tenants.User"
 

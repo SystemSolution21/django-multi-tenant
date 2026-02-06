@@ -1,8 +1,12 @@
 # accounts/forms.py
 
 # Import django libraries
+from django.conf import settings
 from django.contrib.auth.forms import UserCreationForm
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.utils.text import slugify
 
 # Import local modules
 from tenants.models import User
@@ -34,3 +38,28 @@ class OnboardingForm(forms.Form):
         label="Project Name",
         help_text="Enter the name of your first project.",
     )
+
+    def clean_company_name(self):
+        company_name = self.cleaned_data["company_name"]
+        # Generate schema_name from company name (e.g., "My Company" -> "mycompany")
+        schema_name = slugify(company_name).replace("-", "")
+
+        # Validate characters
+        if schema_name:
+            validator = RegexValidator(
+                regex=r"^[a-z0-9]+$",
+                message="The company name generates an invalid subdomain. Only lowercase letters and numbers are allowed.",
+            )
+            validator(schema_name)
+
+        # Check against reserved names
+        reserved_names = getattr(settings, "TENANT_SUBDOMAIN_RESERVED_NAMES", [])
+        if schema_name in reserved_names:
+            raise ValidationError(
+                f"The name '{company_name}' generates a reserved subdomain ('{schema_name}'). Please choose another."
+            )
+
+        # Store schema_name in cleaned_data for the view to use
+        self.cleaned_data["schema_name"] = schema_name
+
+        return company_name

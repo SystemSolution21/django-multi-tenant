@@ -19,8 +19,8 @@
         <td>{{ tenant.schema_name }}</td>
         <td>{{ tenant.created_at }}</td>
         <td>
-          <a href="{% url 'tenant_update' tenant.pk %}">Edit</a>
-          <a href="{% url 'tenant_delete' tenant.pk %}">Delete</a>
+          <a href="{% url 'tenant_update' tenant.pk %}" class="btn btn-outline-primary">Edit</a>
+          <a href="{% url 'tenant_delete' tenant.pk %}" class="btn btn-outline-danger">Delete</a>
         </td>
       </tr>
     {% endfor %}

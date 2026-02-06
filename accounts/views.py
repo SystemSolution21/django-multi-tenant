@@ -11,7 +11,6 @@ from django.db import connection, transaction
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
-from django.utils.text import slugify
 from django.views.generic import CreateView, FormView
 from django_tenants.utils import schema_context
 
@@ -67,7 +66,7 @@ class OnboardingView(LoginRequiredMixin, FormView):
 
         with transaction.atomic():
             # Generate schema_name from company name (e.g., "My Company" -> "mycompany")
-            schema_name = slugify(company_name).replace("-", "")
+            schema_name = form.cleaned_data.get("schema_name")
             if not schema_name:
                 schema_name = f"tenant{user.pk}"
 
@@ -86,7 +85,7 @@ class OnboardingView(LoginRequiredMixin, FormView):
             user.refresh_from_db()
             # Explicitly set the owner as Admin in our custom fields
             user.role = "admin"
-            user.is_tenant_admin = True
+            user.is_tenant_admin = True  # type: ignore
             user.save()
 
             # Generate a simple key from the name (e.g., "My Project" -> "MYP")

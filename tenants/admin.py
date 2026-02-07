@@ -8,8 +8,9 @@ from django.contrib import admin
 from django.contrib import messages
 from django.db import connection
 from django.http import HttpResponseRedirect
-from django.shortcuts import render
-from django.urls import reverse
+from django.shortcuts import get_object_or_404, render
+from django.urls import path, reverse
+from django.utils.html import format_html
 from django_tenants.admin import TenantAdminMixin
 from tenant_users.permissions.models import UserTenantPermissions
 
@@ -72,10 +73,19 @@ class UserAdmin(admin.ModelAdmin):
 
     form = UserAdminForm
 
-    list_display: list[str] = ["id", "email", "role", "is_active"]
-    list_display_links: list[str] = ["id", "email"]
+    list_display: list[str] = [
+        "email",
+        "first_name",
+        "last_name",
+        "role",
+        "is_active",
+        "is_global_superuser",
+        "owned_tenants_count",
+        "hijack_user_display",
+    ]
+    list_display_links: list[str] = ["email"]
     search_fields: list[str] = ["email", "first_name", "last_name"]
-    list_filter: list[str] = ["role", "is_active"]
+    list_filter: list[str] = ["role", "is_active", "is_global_superuser", "is_verified"]
     fieldsets = [
         (
             None,
@@ -201,18 +211,86 @@ class UserAdmin(admin.ModelAdmin):
 
         return super().delete_view(request, object_id, extra_context)
 
+    def owned_tenants_count(self, obj):
+        return Tenant.objects.filter(owner=obj).count()
+
+    owned_tenants_count.short_description = "Owned Tenants"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "<path:object_id>/hijack/",
+                self.admin_site.admin_view(self.hijack_user_view),
+                name="tenants_user_hijack",
+            ),
+        ]
+        return custom_urls + urls
+
+    def hijack_user_view(self, request, object_id):
+        user = get_object_or_404(User, pk=object_id)
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Login as {user.email}",
+            "user_obj": user,
+            "hijack_url": reverse("hijack:acquire"),
+        }
+        return render(request, "tenants/admin/hijack_confirm.html", context)
+
+    def hijack_user_display(self, obj):
+        hijack_url = reverse("admin:tenants_user_hijack", args=[obj.pk])
+        return format_html(
+            '<a href="{}" class="button" style="background-color: #f0ad4e; color: white; padding: 3px 10px; border-radius: 3px; text-decoration: none;">Login as</a>',
+            hijack_url,
+        )
+
+    hijack_user_display.short_description = "Impersonate"
+
 
 @admin.register(Tenant)
 class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
     """Admin class for the Tenant model."""
 
-    list_display: list[str] = ["id", "name", "schema_name", "created_at"]
-    list_display_links: list[str] = ["id", "name"]
-    search_fields: list[str] = ["name", "schema_name"]
+    list_display: list[str] = [
+        "name",
+        "schema_name",
+        "owner_display",
+        "domains_display",
+        "created_at",
+    ]
+    list_display_links: list[str] = ["name"]
+    search_fields: list[str] = ["name", "schema_name", "owner__email"]
+    list_filter = ["created_at"]
 
     def delete_model(self, request, obj) -> None:
         # Force delete the tenant, bypassing django-tenant-users safety checks
         obj.delete(force_drop=True)
+
+    def owner_display(self, obj):
+        if obj.owner:
+            link = reverse("admin:tenants_user_change", args=[obj.owner.pk])
+            return format_html('<a href="{}">{}</a>', link, obj.owner.email)
+        return "-"
+
+    owner_display.short_description = "Owner"
+
+    def domains_display(self, obj):
+        domain = Domain.objects.filter(tenant=obj, is_primary=True).first()
+        if not domain:
+            domain = Domain.objects.filter(tenant=obj).first()
+
+        if domain:
+            # Assuming port 8000 for development environment consistency
+            url = f"http://{domain.domain}:8000"
+            return format_html(
+                '<a href="{}" target="_blank">{}</a> (<a href="{}/admin/" target="_blank">Admin</a>)',
+                url,
+                domain.domain,
+                url,
+            )
+        return "No Domain"
+
+    domains_display.short_description = "Domain / Admin"
 
 
 @admin.register(Domain)
@@ -222,3 +300,4 @@ class DomainAdmin(admin.ModelAdmin):
     list_display: list[str] = ["id", "domain", "tenant", "is_primary"]
     list_display_links: list[str] = ["id", "domain"]
     search_fields: list[str] = ["domain"]
+    list_filter = ["is_primary"]

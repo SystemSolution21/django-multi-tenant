@@ -1,0 +1,16 @@
+<!-- templates/admin/base_site.html -->
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div style="padding: 20px; background: #000; border: 1px solid #ccc; border-radius: 5px; max-width: 600px;">
+    <h2>⚠️ Impersonation Warning</h2>
+    <p>You are about to log in as <strong>{{ user_obj.email }}</strong>.</p>
+    <p>While impersonating, any actions you take will be recorded as if performed by this user.</p>
+    
+    <form action="{{ hijack_url }}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="user_pk" value="{{ user_obj.pk }}">
+        <input type="submit" value="Yes, Login as {{ user_obj.email }}" class="default" style="background-color: #d9534f; border: none; padding: 10px 20px; color: white; cursor: pointer; border-radius: 4px;">
+        <a href="#" onclick="window.history.back(); return false;" class="button cancel-link" style="margin-left: 10px; padding: 10px 20px;">Cancel</a>
+    </form>
+</div>
+{% endblock %}

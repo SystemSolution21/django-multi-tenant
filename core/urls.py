@@ -39,4 +39,5 @@ urlpatterns: list[Any] = [
     path(route="accounts/", view=include("accounts.urls")),  # Auth URLs
     path(route="", view=include("tasks.urls")),  # Tasks web UI
     path(route="admin/", view=admin.site.urls),
+    path(route="hijack/", view=include("hijack.urls")),
 ]

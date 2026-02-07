@@ -33,4 +33,5 @@ urlpatterns: list[Any] = [
         view=GlobalSearchAPIView.as_view(),
         name="global-search",
     ),
+    path(route="hijack/", view=include("hijack.urls")),
 ]

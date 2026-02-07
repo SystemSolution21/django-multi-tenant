@@ -44,6 +44,8 @@ ALLOWED_HOSTS = [
 # Application definition (public/shared apps only)
 SHARED_APPS = [
     "django_tenants",  # django-tenants
+    "hijack",  # Impersonation
+    "hijack.contrib.admin",  # Hijack admin integration
     "crispy_forms",
     "crispy_bootstrap5",
     "core.apps.CoreConfig",  # local core app
@@ -81,6 +83,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "hijack.middleware.HijackUserMiddleware",  # Hijack middleware
     # "tenant_users.tenants.middleware.TenantAccessMiddleware",  # django-tenant-users
     "core.middleware.PublicTenantAccessMiddleware",  # custom middleware inhereitance of tenant-users
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -174,6 +177,10 @@ TENANT_USERS_DOMAIN = BASE_DOMAIN
 AUTHENTICATION_BACKENDS = [
     "tenant_users.permissions.backend.UserBackend",
 ]
+
+# Django Hijack Settings
+HIJACK_ALLOW_GET_REQUESTS = True
+HIJACK_LOGOUT_REDIRECT_URL = "/admin/tenants/user/"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

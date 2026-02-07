@@ -37,6 +37,9 @@ urlpatterns: list[Any] = [
     path(route="tenants/", view=include("tenants.urls")),  # Tenants web UI
     path(route="blog/", view=include("blog.urls")),  # Blog web UI
     path(route="accounts/", view=include("accounts.urls")),  # Auth URLs
+    path(
+        route="accounts/", view=include("django.contrib.auth.urls")
+    ),  # Django Auth URLs (password reset, etc.)
     path(route="", view=include("tasks.urls")),  # Tasks web UI
     path(route="admin/", view=admin.site.urls),
     path(route="hijack/", view=include("hijack.urls")),

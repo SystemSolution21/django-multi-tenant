@@ -9,7 +9,8 @@ from django.core.validators import RegexValidator
 from django.utils.text import slugify
 
 # Import local modules
-from tenants.models import User
+from django_tenants.utils import schema_context
+from tenants.models import User, UserInvitation
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -17,10 +18,39 @@ class CustomUserCreationForm(UserCreationForm):
     A custom form for creating new users, using email as the username.
     """
 
+    invitation_code = forms.CharField(
+        required=False,
+        help_text="Enter your invitation code if you have one.",
+        label="Invitation Code (Optional)",
+    )
+
     class Meta(UserCreationForm.Meta):  # type: ignore
         model = User
         fields = ("email", "first_name", "last_name")
         field_classes = {"email": UserCreationForm.Meta.field_classes["username"]}  # type: ignore
+
+    def clean(self):
+        cleaned_data = super().clean()
+        code = cleaned_data.get("invitation_code")
+        email = cleaned_data.get("email")
+
+        if code and email:
+            # Validate the invitation code against the public schema
+            with schema_context("public"):
+                try:
+                    invitation = UserInvitation.objects.get(
+                        token=code, email=email, is_accepted=False
+                    )
+                    if invitation.is_expired:
+                        self.add_error(
+                            "invitation_code", "This invitation has expired."
+                        )
+                except UserInvitation.DoesNotExist:
+                    self.add_error(
+                        "invitation_code",
+                        "Invalid invitation code or email mismatch. Please check your email.",
+                    )
+        return cleaned_data
 
 
 class OnboardingForm(forms.Form):

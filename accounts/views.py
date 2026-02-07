@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import connection, transaction
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, FormView
@@ -16,8 +16,8 @@ from django_tenants.utils import schema_context
 
 # Import local modules
 from .forms import CustomUserCreationForm, OnboardingForm
-from tenants.models import Tenant, User
-from tenants.utils import create_tenant
+from tenants.models import Domain, Tenant, User, UserInvitation
+from tenants.utils import create_tenant, get_public_domain_url
 
 
 class SignUpView(CreateView):
@@ -29,13 +29,60 @@ class SignUpView(CreateView):
     success_url: str | Callable[..., Any] | None = reverse_lazy("onboarding")
     template_name = "registration/signup.html"
 
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        """
+        Redirect signups on tenant subdomains to the public domain.
+        """
+        if connection.schema_name != "public":
+            public_url = get_public_domain_url(request)
+            if public_url:
+                return redirect(f"{public_url}{reverse_lazy('signup')}")
+        return super().dispatch(request, *args, **kwargs)
+
     def form_valid(self, form) -> HttpResponse:
         with transaction.atomic():
             response: HttpResponse = super().form_valid(form=form)
-            tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
+
+            # 1. Add user to Public Tenant (Required for global login)
+            public_tenant: Tenant = Tenant.objects.get(schema_name="public")
             user: User = cast(User, self.object)  # type: ignore[assignment]
-            # This line is critical: it links the new user to the current (public) tenant
-            tenant.add_user(user_obj=user)
+            public_tenant.add_user(user_obj=user)
+
+            # 2. Check for Invitation Code
+            invitation_code = form.cleaned_data.get("invitation_code")
+            if invitation_code:
+                with schema_context("public"):
+                    invitation = UserInvitation.objects.get(token=invitation_code)
+                    target_tenant = invitation.tenant
+
+                    # Add user to the target tenant
+                    target_tenant.add_user(
+                        user,
+                        is_superuser=(invitation.role == "admin"),
+                        is_staff=(invitation.role in ["admin", "staff"]),
+                    )
+
+                    # Update user role and invitation status
+                    user.role = invitation.role
+                    user.save()
+                    invitation.is_accepted = True
+                    invitation.save()
+
+                    # Find the domain for the target tenant to redirect
+                    domain_obj = Domain.objects.filter(
+                        tenant=target_tenant, is_primary=True
+                    ).first()
+                    if not domain_obj:
+                        domain_obj = Domain.objects.filter(tenant=target_tenant).first()
+
+                    if domain_obj:
+                        port = self.request.get_port()
+                        domain = domain_obj.domain
+                        if port and port not in ["80", "443"] and ":" not in domain:
+                            domain = f"{domain}:{port}"
+
+                        # Override the default success_url (onboarding) to go to the tenant
+                        response = redirect(f"http://{domain}/")
 
             # Automatically log the user in after signup
             login(
@@ -54,6 +101,14 @@ class OnboardingView(LoginRequiredMixin, FormView):
     template_name = "registration/onboarding.html"
     form_class = OnboardingForm
     success_url: str | Callable[..., Any] | None = reverse_lazy("index")
+
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        """
+        Restrict onboarding to the public schema.
+        """
+        if connection.schema_name != "public":
+            return redirect("index")
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form) -> HttpResponse:
         # Import Project here to avoid issues if tasks app is not loaded in shared context

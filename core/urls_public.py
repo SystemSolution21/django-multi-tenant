@@ -27,6 +27,7 @@ urlpatterns: list[Any] = [
     path(route="tenants/", view=include("tenants.urls")),
     path(route="admin/", view=admin.site.urls),
     path(route="accounts/", view=include("accounts.urls")),
+    path(route="accounts/", view=include("django.contrib.auth.urls")),
     path(route="blog/", view=include("blog.urls")),
     path(
         route="api/global-search/",

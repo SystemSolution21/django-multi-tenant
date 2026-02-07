@@ -128,6 +128,14 @@ class UserAdmin(admin.ModelAdmin):
         ),
     ]
 
+    def get_list_display(self, request):
+        list_display = list(super().get_list_display(request))
+        # Only show hijack button to global superusers
+        if not getattr(request.user, "is_global_superuser", False):
+            if "hijack_user_display" in list_display:
+                list_display.remove("hijack_user_display")
+        return list_display
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         # If we are in a tenant schema (not public), filter users to only those in this tenant

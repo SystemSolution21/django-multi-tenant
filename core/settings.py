@@ -82,7 +82,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # "tenant_users.tenants.middleware.TenantAccessMiddleware",  # django-tenant-users
-    "core.middleware.PublicTenantAccessMiddleware",  # custom middleware
+    "core.middleware.PublicTenantAccessMiddleware",  # custom middleware inhereitance of tenant-users
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

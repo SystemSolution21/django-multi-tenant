@@ -1,5 +1,5 @@
 /* static/core/style.css */
-/* Sidebar active link style*/
+/* SidebarMenu active link style */
 #sidebarMenu .nav-link.active-link {
     background-color: #cfcfcf;
     color: black !important;

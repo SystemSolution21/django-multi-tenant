@@ -36,37 +36,37 @@
           <!-- Navbar Links -->
           {% is_tenant_admin as user_is_tenant_admin %}
             <ul class="navbar-nav">
-            {% if request.tenant.schema_name == 'public' %}
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
-              </li>
-              {% if user.is_authenticated and user.is_global_superuser %}
+              {% if request.tenant.schema_name == 'public' %}
                 <li class="nav-item">
-                  <a class="nav-link" href="{% url 'tenant_list' %}">Tenants</a>
+                  <a class="nav-link" href="{% url 'article_list' %}" hidden="hidden">Blog</a>
                 </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="{% url 'user_list' %}">Users</a>
-                </li>
-              {% endif %}
-            {% else %}
-                <li class="nav-item">
-                  <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
-                </li>
-              {% if user.is_authenticated %}
-                <li class="nav-item">
-                  <a class="nav-link" href="{% url 'project_list' %}">Projects</a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="{% url 'task_list' %}">Tasks</a>
-                </li>
-                {% if user_is_tenant_admin %}
+                {% if user.is_authenticated and user.is_global_superuser %}
                   <li class="nav-item">
-                    <a class="nav-link" href="{% url 'user_list' %}">Users</a>
+                    <a class="nav-link" href="{% url 'tenant_list' %}" hidden="hidden">Tenants</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="{% url 'user_list' %}" hidden="hidden">Users</a>
                   </li>
                 {% endif %}
+              {% else %}
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'article_list' %}" hidden="hidden">Blog</a>
+                </li>
+                {% if user.is_authenticated %}
+                  <li class="nav-item">
+                    <a class="nav-link" href="{% url 'project_list' %}" hidden="hidden">Projects</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="{% url 'task_list' %}" hidden="hidden">Tasks</a>
+                  </li>
+                  {% if user_is_tenant_admin %}
+                    <li class="nav-item">
+                      <a class="nav-link" href="{% url 'user_list' %}" hidden="hidden">Users</a>
+                    </li>
+                  {% endif %}
+                {% endif %}
               {% endif %}
-            {% endif %}
-          </ul>
+            </ul>
           <!-- Search Form -->
           <form class="d-flex mx-auto" id="siteSearchForm">
             <div class="input-group">

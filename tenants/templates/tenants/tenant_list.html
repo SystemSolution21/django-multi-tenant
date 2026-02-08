@@ -20,7 +20,9 @@
         <td>{{ tenant.created_at }}</td>
         <td>
           <a href="{% url 'tenant_update' tenant.pk %}" class="btn btn-outline-primary">Edit</a>
-          <a href="{% url 'tenant_delete' tenant.pk %}" class="btn btn-outline-danger">Delete</a>
+          {% if tenant.schema_name != 'public' %}
+            <a href="{% url 'tenant_delete' tenant.pk %}" class="btn btn-outline-danger">Delete</a>
+          {% endif %}
         </td>
       </tr>
     {% endfor %}

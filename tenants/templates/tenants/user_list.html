@@ -5,9 +5,11 @@
 <div class="container">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>User Management</h2>
-    <a href="{% url 'user_invite' %}" class="btn btn-primary">
-      <i class="bi bi-person-plus"></i> Invite User
-    </a>
+    {% if request.tenant.schema_name != 'public' %}
+      <a href="{% url 'user_invite' %}" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> Invite User
+      </a>
+    {% endif %}
   </div>
   <!-- User List Section -->
   <div class="card">
@@ -59,7 +61,7 @@
                   {% if user != request.user %}
                     <a href="{% url 'user_delete' user.pk %}" class="btn btn-sm btn-outline-danger">Remove</a>
                   {% endif %}
-                  {% if request.user == request.tenant.owner %}
+                  {% if request.tenant.schema_name != 'public' and request.user == request.tenant.owner %}
                       <a href="{% url 'tenant_transfer_ownership' %}" class="btn btn-warning" hidden="hidden">Transfer Ownership</a>
                   {% endif %}
                 </td>

@@ -120,7 +120,9 @@ class TenantDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     success_url: Any = reverse_lazy("tenant_list")
 
     def test_func(self) -> bool:
-        return self.request.user.is_superuser
+        # Prevent deleting the public tenant
+        tenant = cast(Tenant, self.get_object())
+        return self.request.user.is_superuser and tenant.schema_name != "public"
 
     def form_valid(self, form) -> HttpResponseRedirect:
         success_url: str = self.get_success_url()
@@ -264,6 +266,13 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
     fields: list[str] = ["email", "role"]
     template_name = "tenants/user_invite.html"
     success_url: Any = reverse_lazy("user_list")
+
+    def dispatch(self, request, *args, **kwargs):
+        # Prevent inviting users to the public tenant
+        if connection.schema_name == "public":
+            messages.error(request, "You cannot invite users to the public tenant.")
+            return redirect("user_list")
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form) -> HttpResponse:
         user: User = cast(User, self.request.user)

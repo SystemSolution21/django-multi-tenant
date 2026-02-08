@@ -73,7 +73,7 @@ A complete task management system with tenant permissions and user assignment fo
 ## 🚀 Tasks App Test
 
 1. **Start the server**: `python manage.py runserver`
-2. **Visit a tenant**: `http://demo1.localhost:8000/`
+2. **Visit a tenant**: `http://demo1.lvh.me:8000/`
 3. **Navigate to**:
    - Projects: Click "Projects" in navbar
    - Tasks: Click "Tasks" in navbar

@@ -15,7 +15,7 @@ The architecture uses a **Shared User / Isolated Tenant** model.
 
 ### Tenant (Container)
 
-* **Location:** Lives in the `public` schema (metadata) but **owns** a specific PostgreSQL schema (e.g., `demo-1`) where actual app data resides.
+* **Location:** Lives in the `public` schema (metadata) but **owns** a specific PostgreSQL schema (e.g., `demo1`) where actual app data resides.
 * **Definition:** Inherits from `TenantBase` (`tenants/models.py`).
 * **Relation:** A Tenant has **many** Users (via a permission table managed by `django-tenant-users`) and **many** Domains (one-to-many relationship).
 
@@ -23,7 +23,7 @@ The architecture uses a **Shared User / Isolated Tenant** model.
 
 * **Location:** Lives in the `public` schema.
 * **Definition:** Inherits from `DomainMixin` (`tenants/models.py`).
-* **Relation:** A Domain belongs to **one** Tenant(ForeignKey). It acts as the routing key (e.g., `demo-1.localhost` -> `demo-1` schema). Multiple domains can point to the same tenant (e.g., `demo-1.com` and `demo-1.net` both route to the `demo-1` schema).
+* **Relation:** A Domain belongs to **one** Tenant(ForeignKey). It acts as the routing key (e.g., `demo1.lvh.me` -> `demo1` schema). Multiple domains can point to the same tenant (e.g., `demo1.com` and `demo1.net` both route to the `demo1` schema).
 
 ## 2. Deletion Restrictions & Behavior
 
@@ -73,7 +73,7 @@ If you are resetting the environment (like in `populate_db.py`):
 ### Scenario C: Removing a Specific Route
 
 1. **Delete the Domain.**
-    * *Why?* If you just want to change `demo-1.localhost` to `app.localhost`, you delete the old domain and create a new one linked to the *same* tenant.
+    * *Why?* If you just want to change `demo1.lvh.me` to `app.lvh.me`, you delete the old domain and create a new one linked to the *same* tenant.
 
 ## 4. Summary of Hierarchy
 

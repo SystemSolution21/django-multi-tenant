@@ -1,27 +1,52 @@
-<!-- tenants/templates/tenants/user_confirm_remove.html -->
+<!-- tenants/templates/tenants/user_confirm_remove_delete.html -->
 {% extends "base.html" %}
-{% block title %}Remove User - {{ object.full_name }}{% endblock %}
+{% block title %}
+  {% if request.tenant.schema_name == 'public' %}
+    Delete User - {{ object.full_name }}
+  {% else %}
+    Remove User - {{ object.full_name }}
+  {% endif %}
+{% endblock %}
 {% block content %}
 <div class="container">
   <div class="row justify-content-center">
     <div class="col-md-6">
       <div class="card border-danger">
         <div class="card-header bg-danger text-white">
-          <h4 class="mb-0">Remove User from Tenant</h4>
+          <h4 class="mb-0">
+            {% if request.tenant.schema_name == 'public' %}
+              Delete User Globally
+            {% else %}
+              Remove User from Tenant
+            {% endif %}
+          </h4>
         </div>
         <div class="card-body">
           <div class="alert alert-warning" role="alert">
             <i class="bi bi-exclamation-triangle-fill"></i>
             <strong>Warning:</strong> This action cannot be undone.
           </div>
-          <p>Are you sure you want to remove <strong>{{ object.full_name }}</strong> ({{ object.email }}) from
-            <strong>{{ request.tenant.name }}</strong>?</p>
+          {% if request.tenant.schema_name == 'public' %}
+            <p>Are you sure you want to <strong>permanently delete</strong> the user <strong>{{ object.full_name }}</strong> ({{ object.email }}) from the <strong>entire system</strong>?</p>
+            <p class="text-danger">
+              <strong>This will delete:</strong>
+            </p>
+            <ul class="text-danger">
+              <li>The user account.</li>
+              <li>All their memberships in other tenants.</li>
+              <li>Any data owned by them that cascades on delete.</li>
+            </ul>
+          {% else %}
+            <p>Are you sure you want to remove <strong>{{ object.full_name }}</strong> ({{ object.email }}) from
+              <strong>{{ request.tenant.name }}</strong>?</p>
+          {% endif %}
           <div class="mb-3">
             <h6>User Details:</h6>
             <ul class="list-unstyled">
               <li><strong>Name:</strong> {{ object.full_name }}</li>
               <li><strong>Email:</strong> {{ object.email }}</li>
               <li><strong>Role:</strong> {{ object.get_role_display }}</li>
+              {% if request.tenant.schema_name != 'public' %}
               <li><strong>Tenant Admin:</strong>
                 {% if object.is_tenant_admin %}
                   <span class="badge bg-danger">Yes</span>
@@ -29,8 +54,10 @@
                   <span class="badge bg-secondary">No</span>
                 {% endif %}
               </li>
+              {% endif %}
             </ul>
           </div>
+          {% if request.tenant.schema_name != 'public' %}
           <p class="text-muted">
             <small>
               <strong>Note:</strong> The user account will not be deleted, only their access to this tenant will be
@@ -38,11 +65,18 @@
               They can be re-invited later if needed.
             </small>
           </p>
+          {% endif %}
           <form method="post">
             {% csrf_token %}
             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
               <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancel</a>
-              <button type="submit" class="btn btn-danger">Remove User</button>
+              <button type="submit" class="btn btn-danger">
+                {% if request.tenant.schema_name == 'public' %}
+                  Delete User Globally
+                {% else %}
+                  Remove User
+                {% endif %}
+              </button>
             </div>
           </form>
         </div>

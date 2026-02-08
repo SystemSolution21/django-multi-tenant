@@ -497,12 +497,12 @@ class UserEditView(TenantAdminRequiredMixin, UpdateView):
         return reverse(viewname="user_list")
 
 
-class UserRemoveView(TenantAdminRequiredMixin, View):
+class UserRemoveDeleteView(TenantAdminRequiredMixin, View):
     """
     Remove user from current tenant instead of deleting the user.
     """
 
-    template_name: str = "tenants/user_confirm_remove.html"
+    template_name: str = "tenants/user_confirm_remove_delete.html"
     success_url: Any = reverse_lazy("user_list")
 
     def get_object(self) -> User:

@@ -59,7 +59,11 @@
                 <td>
                   <a href="{% url 'user_edit' user.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
                   {% if user != request.user %}
-                    <a href="{% url 'user_delete' user.pk %}" class="btn btn-sm btn-outline-danger">Remove</a>
+                    {% if request.tenant.schema_name == 'public' %}
+                      <a href="{% url 'user_delete' user.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    {% else %}
+                      <a href="{% url 'user_remove' user.pk %}" class="btn btn-sm btn-outline-danger">Remove</a>
+                    {% endif %}
                   {% endif %}
                   {% if request.tenant.schema_name != 'public' and request.user == request.tenant.owner %}
                       <a href="{% url 'tenant_transfer_ownership' %}" class="btn btn-warning" hidden="hidden">Transfer Ownership</a>

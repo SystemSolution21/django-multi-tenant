@@ -32,3 +32,5 @@ Both result in the exact same structure in the database.
 
 - How can I customize the "base.html" template to include a user dropdown menu in the navbar with links to "Profile", "My Tenants", and "Logout"?
 - How can I create a "My Profile" page where users can update their first name, last name, and change their password?
+- How can I create a "My Tenants" dashboard on the public domain so users who belong to multiple tenants can choose which one to access?
+- How can I implement a custom 403 Forbidden page that allows users to request access if they try to visit a tenant they don't belong to?

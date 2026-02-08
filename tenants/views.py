@@ -430,7 +430,10 @@ class AcceptInvitationView(View):
                 if port not in ["80", "443"]
                 else tenant_domain.domain
             )
-            return redirect(f"http://{domain_with_port}/tenants/users/")
+
+            if invitation.role == "admin":
+                return redirect(f"http://{domain_with_port}/tenants/users/")
+            return redirect(f"http://{domain_with_port}/")
 
         return redirect("index")
 

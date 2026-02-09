@@ -1,7 +1,40 @@
 /* static/core/style.css */
+
+/* Sidebar Menu */
+#sidebarMenu {
+    padding: 0.25rem 0.25rem;
+}
+
+/* Compact Sidebar */
+#sidebarMenu .nav-link {
+    padding: 0.25rem 0.5rem;
+}
+
+#sidebarMenu .nav-link small {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
 /* SidebarMenu active link style */
 #sidebarMenu .nav-link.active-link {
-    background-color: #cfcfcf;
-    color: black !important;
+    background-color: #e7f1ff;
+    color: #0d6efd !important;
     font-weight: 600 !important;
+    border-radius: 0.5rem;
+}
+
+/* Tree View Styles */
+.tree-view summary {
+    cursor: pointer;
+    list-style: none;
+    /* Hide default triangle */
+}
+
+.tree-view summary::-webkit-details-marker {
+    display: none;
+}
+
+.tree-view summary:hover,
+.tree-view a:hover {
+    background-color: #f8f9fa;
 }

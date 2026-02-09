@@ -11,6 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
     <!-- Custom CSS -->
     <link rel="stylesheet" type="text/css" href="{% static 'core/style.css' %}"/>
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Favicon Icon -->
     <link rel="icon" type="image/x-icon" href="{% static 'core/favicon.ico' %}"/>
   </head>
@@ -35,38 +37,6 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <!-- Navbar Links -->
           {% is_tenant_admin as user_is_tenant_admin %}
-            <ul class="navbar-nav">
-              {% if request.tenant.schema_name == 'public' %}
-                <li class="nav-item">
-                  <a class="nav-link" href="{% url 'article_list' %}" hidden="hidden">Blog</a>
-                </li>
-                {% if user.is_authenticated and user.is_global_superuser %}
-                  <li class="nav-item">
-                    <a class="nav-link" href="{% url 'tenant_list' %}" hidden="hidden">Tenants</a>
-                  </li>
-                  <li class="nav-item">
-                    <a class="nav-link" href="{% url 'user_list' %}" hidden="hidden">Users</a>
-                  </li>
-                {% endif %}
-              {% else %}
-                <li class="nav-item">
-                  <a class="nav-link" href="{% url 'article_list' %}" hidden="hidden">Blog</a>
-                </li>
-                {% if user.is_authenticated %}
-                  <li class="nav-item">
-                    <a class="nav-link" href="{% url 'project_list' %}" hidden="hidden">Projects</a>
-                  </li>
-                  <li class="nav-item">
-                    <a class="nav-link" href="{% url 'task_list' %}" hidden="hidden">Tasks</a>
-                  </li>
-                  {% if user_is_tenant_admin %}
-                    <li class="nav-item">
-                      <a class="nav-link" href="{% url 'user_list' %}" hidden="hidden">Users</a>
-                    </li>
-                  {% endif %}
-                {% endif %}
-              {% endif %}
-            </ul>
           <!-- Search Form -->
           <form class="d-flex mx-auto" id="siteSearchForm">
             <div class="input-group">
@@ -103,42 +73,69 @@
     <!-- Sidebar Menu -->
     <div class="container-fluid">
       <div class="row">
-        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse" style="min-height: calc(100vh - 56px);">
-          <div class="position-sticky pt-3">
+        <nav id="sidebarMenu" class="col-md-auto d-md-block bg-light sidebar collapse" style="min-height: calc(100vh - 56px);">
+          <div class="position-sticky">
             <!-- Sidebar Links -->
             <ul class="nav flex-column">
               {% if request.tenant.schema_name == 'public' %}
                 <li class="nav-item">
-                  <a class="nav-link" href="{% url 'index' %}">Home</a>
+                  <a class="nav-link text-center" href="{% url 'index' %}">
+                    <i class="bi bi-house-door d-block"></i>
+                    <small>Home</small>
+                  </a>
                 </li>
                 <li class="nav-item">
-                  <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
+                  <a class="nav-link text-center" href="{% url 'article_list' %}">
+                    <i class="bi bi-journal-text d-block"></i>
+                    <small>Blog</small>
+                  </a>
                 </li>
                 {% if user.is_authenticated and user.is_global_superuser %}
                   <li class="nav-item">
-                    <a class="nav-link" href="{% url 'tenant_list' %}">Tenants</a>
+                    <a class="nav-link text-center" href="{% url 'tenant_list' %}">
+                      <i class="bi bi-buildings d-block"></i>
+                      <small>Tenants</small>
+                    </a>
                   </li>
                   <li class="nav-item">
-                    <a class="nav-link" href="{% url 'user_list' %}">Users</a>
+                    <a class="nav-link text-center" href="{% url 'user_list' %}">
+                      <i class="bi bi-people d-block"></i>
+                      <small>Users</small>
+                    </a>
                   </li>
                 {% endif %}
               {% else %}
                 <li class="nav-item">
-                  <a class="nav-link" href="{% url 'index' %}">Dashboard</a>
+                  <a class="nav-link text-center" href="{% url 'index' %}">
+                    <i class="bi bi-speedometer2 d-block"></i>
+                    <small>Home</small>
+                  </a>
                 </li>
                   <li class="nav-item">
-                    <a class="nav-link" href="{% url 'article_list' %}">Blog</a>
+                    <a class="nav-link text-center" href="{% url 'article_list' %}">
+                      <i class="bi bi-journal-text d-block"></i>
+                      <small>Blog</small>
+                    </a>
                   </li>
                 {% if user.is_authenticated %}
                   <li class="nav-item">
-                    <a class="nav-link" href="{% url 'project_list' %}">Projects</a>
+                    <a class="nav-link text-center" href="{% url 'project_list' %}">
+                      <i class="bi bi-kanban d-block"></i>
+                      <small>Projects</small>
+                    </a>
                   </li>
                   <li class="nav-item">
-                    <a class="nav-link" href="{% url 'task_list' %}">Tasks</a>
+                    <a class="nav-link text-center" href="{% url 'task_list' %}">
+                      <i class="bi bi-list-check d-block"></i>
+                      <small>Tasks</small>
+                    </a>
                   </li>
                   {% if user_is_tenant_admin %}
                     <li class="nav-item">
-                      <a class="nav-link" href="{% url 'user_list' %}">Users</a>
+                      <a class="nav-link text-center" href="{% url 'user_list' %}">
+                        <i class="bi bi-people d-block"></i>
+                        <small>Users</small>
+                      </a>
                     </li>
                   {% endif %}
                 {% endif %}
@@ -146,8 +143,87 @@
             </ul>
           </div>
         </nav>
+        <!-- Tree View Sidebar -->
+        <div id="treeSidebar" class="col-md-3 col-lg-2 bg-white border-end p-0 d-none d-md-block" style="height: calc(100vh - 56px); overflow-y: auto;">
+          <div class="d-flex justify-content-between align-items-center p-2 border-bottom bg-light sticky-top">
+            <span class="fw-bold small text-uppercase text-muted">Explorer</span>
+            <button class="btn btn-sm btn-link text-secondary p-0" id="hideTreeBtn" title="Collapse Explorer">
+              <i class="bi bi-chevron-double-left"></i>
+            </button>
+          </div>
+          <div class="p-2">
+            {% block tree_view %}
+              <!-- Default Tree Content -->
+              <div class="tree-view">
+                {% if '/blog/' in request.path %}
+                  <details open>
+                    <summary class="px-2 py-1 rounded">
+                      <i class="bi bi-journal-text me-1"></i> Blog
+                    </summary>
+                    <ul class="list-unstyled ps-4 small mt-1">
+                      <li><a href="{% url 'article_list' %}" class="text-decoration-none text-dark d-block py-1">All Articles</a></li>
+                    </ul>
+                  </details>
+                {% elif '/tenants/users/' in request.path %}
+                  <details open>
+                    <summary class="px-2 py-1 rounded">
+                      <i class="bi bi-people me-1"></i> Users
+                    </summary>
+                    <ul class="list-unstyled ps-4 small mt-1">
+                      <li><a href="{% url 'user_list' %}" class="text-decoration-none text-dark d-block py-1">All Users</a></li>
+                      {% if request.tenant.schema_name != 'public' %}
+                        <li><a href="{% url 'user_invite' %}" class="text-decoration-none text-dark d-block py-1">Invite User</a></li>
+                      {% endif %}
+                    </ul>
+                  </details>
+                {% elif '/tenants/' in request.path and request.tenant.schema_name == 'public' %}
+                  <details open>
+                    <summary class="px-2 py-1 rounded">
+                      <i class="bi bi-buildings me-1"></i> Tenants
+                    </summary>
+                    <ul class="list-unstyled ps-4 small mt-1">
+                      <li><a href="{% url 'tenant_list' %}" class="text-decoration-none text-dark d-block py-1">All Tenants</a></li>
+                      <li><a href="{% url 'tenant_create' %}" class="text-decoration-none text-dark d-block py-1">Create Tenant</a></li>
+                    </ul>
+                  </details>
+                {% elif '/projects/' in request.path %}
+                  {% if user.is_authenticated and request.tenant.schema_name != 'public' %}
+                    <details class="mt-1" open>
+                      <summary class="px-2 py-1 rounded">
+                        <i class="bi bi-kanban me-1"></i> Projects
+                      </summary>
+                      <ul class="list-unstyled ps-4 small mt-1">
+                        <li><a href="{% url 'project_list' %}" class="text-decoration-none text-dark d-block py-1">All Projects</a></li>
+                        <li><a href="{% url 'project_create' %}" class="text-decoration-none text-dark d-block py-1">Create Project</a></li>
+                      </ul>
+                    </details>
+                  {% endif %}
+                {% elif '/tasks/' in request.path %}
+                  {% if user.is_authenticated and request.tenant.schema_name != 'public' %}
+                  <details class="mt-1" open>
+                    <summary class="px-2 py-1 rounded">
+                      <i class="bi bi-list-check me-1"></i> Tasks
+                    </summary>
+                    <ul class="list-unstyled ps-4 small mt-1">
+                      <li><a href="{% url 'task_list' %}" class="text-decoration-none text-dark d-block py-1">All Tasks</a></li>
+                      <li><a href="{% url 'task_create' %}" class="text-decoration-none text-dark d-block py-1">Create Task</a></li>
+                    </ul>
+                  </details>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted small p-2">
+                    <i class="bi bi-info-circle me-1"></i> Select a module from the sidebar.
+                  </div>
+                {% endif %}
+              </div>
+            {% endblock %}
+          </div>
+        </div>
         <!-- Main Content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 mt-4">
+        <main class="col px-md-4 mt-4" id="mainContent">
+          <button class="btn btn-sm btn-outline-secondary mb-3 d-none" id="showTreeBtn" title="Expand Explorer">
+            <i class="bi bi-chevron-double-right"></i>
+          </button>
           {% if messages %}
             {% for message in messages %}
               <div

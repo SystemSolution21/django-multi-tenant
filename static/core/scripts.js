@@ -131,3 +131,37 @@ if (searchForm && searchInput && searchModalEl) {
     performSearch(query);
   });
 }
+
+// Tree Sidebar Toggle Logic
+const treeSidebar = document.getElementById("treeSidebar");
+const hideTreeBtn = document.getElementById("hideTreeBtn");
+const showTreeBtn = document.getElementById("showTreeBtn");
+const STORAGE_KEY_TREE = "django.tenant.treeSidebarOpen";
+
+if (treeSidebar && hideTreeBtn && showTreeBtn) {
+  const setTreeState = (isOpen) => {
+    if (isOpen) {
+      treeSidebar.classList.remove("d-none");
+      treeSidebar.classList.add("d-md-block");
+      showTreeBtn.classList.add("d-none");
+    } else {
+      treeSidebar.classList.remove("d-md-block");
+      treeSidebar.classList.add("d-none");
+      showTreeBtn.classList.remove("d-none");
+    }
+    localStorage.setItem(STORAGE_KEY_TREE, isOpen);
+  };
+
+  // Initialize state from local storage (default to true)
+  const storedState = localStorage.getItem(STORAGE_KEY_TREE);
+  const initialState = storedState === null ? true : storedState === "true";
+  setTreeState(initialState);
+
+  hideTreeBtn.addEventListener("click", () => {
+    setTreeState(false);
+  });
+
+  showTreeBtn.addEventListener("click", () => {
+    setTreeState(true);
+  });
+}

@@ -14,18 +14,29 @@ const sidebarMenu = document.getElementById("sidebarMenu");
 const currentPath = window.location.pathname;
 
 if (sidebarMenu) {
+  let activeLink = null;
+  let maxLength = 0;
+
   sidebarMenu.querySelectorAll("a").forEach((link) => {
     const linkPath = link.pathname;
 
     // Check current path matches the link or is a sub-path (e.g., /blog/ matches /blog/article/1)
     // Exclude '/' to prevent the Home link from being active on every page
+    // Use longest match to prevent parent links from highlighting when a child link is active
     if (
       currentPath === linkPath ||
-      (linkPath !== "/" && currentPath.startsWith(linkPath + "/"))
+      (linkPath !== "/" && currentPath.startsWith(linkPath))
     ) {
-      link.classList.add("active-link");
+      if (linkPath.length > maxLength) {
+        activeLink = link;
+        maxLength = linkPath.length;
+      }
     }
   });
+
+  if (activeLink) {
+    activeLink.classList.add("active-link");
+  }
 }
 
 // Global Search functionality

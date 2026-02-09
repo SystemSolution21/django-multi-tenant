@@ -1,40 +1,40 @@
 /* static/core/style.css */
-
+/* Custom styles for the SaaS platform */
 /* Sidebar Menu */
 #sidebarMenu {
-    padding: 0.25rem 0.25rem;
+    padding: 0.25rem 0.25rem !important;
 }
 
 /* Compact Sidebar */
 #sidebarMenu .nav-link {
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem 0.25rem !important;
 }
 
 #sidebarMenu .nav-link small {
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
 }
 
 /* SidebarMenu active link style */
 #sidebarMenu .nav-link.active-link {
-    background-color: #e7f1ff;
+    background-color: #cadef9 !important;
     color: #0d6efd !important;
     font-weight: 600 !important;
-    border-radius: 0.5rem;
+    border-radius: 0.5rem !important;
 }
 
 /* Tree View Styles */
 .tree-view summary {
-    cursor: pointer;
-    list-style: none;
+    cursor: pointer !important;
+    list-style: none !important;
     /* Hide default triangle */
 }
 
 .tree-view summary::-webkit-details-marker {
-    display: none;
+    display: none !important;
 }
 
 .tree-view summary:hover,
 .tree-view a:hover {
-    background-color: #f8f9fa;
+    background-color: #f8f9fa !important;
 }

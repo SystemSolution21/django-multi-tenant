@@ -40,7 +40,7 @@ This is the core functional component of the SaaS platform, designed for tenants
 
 The templates are dynamic based on the tenant context:
 
-- **`base.html`**: Features a smart Navbar that changes links based on context (Public vs Tenant).
+- **`base.html`**: Features a smart Navbar(Sidebar) that changes links based on context (Public vs Tenant).
 - **`core/index.html`**:
   - **Public:** Displays a welcome message and blog links.
   - **Tenant:** Displays a Dashboard with statistics cards.
@@ -63,12 +63,38 @@ See `database.txt` for the specific SQL commands to configure the database user 
 - Each tenant has its own PostgreSQL schema (e.g., `demo1`, `demo2`)
 - The `connection.schema_name` variable indicates the current schema context
 
-## Workflow
+## Global Admin Workflow
 
-1. **Database Reset**: Connect to the `postgres` system database to drop and recreate the application database.
-2. **Shared Migrations**: Run `migrate_schemas --shared` to set up the public schema tables.
-3. **Public Tenant**: Call `create_public_tenant` to initialize the system.
-4. **Private Tenants**: Iterate through the JSON data:
-    - Create the tenant owner (User)
-    - Call `provision_tenant` to create the schema and domain
-    - Link the root admin user to the new tenant for administrative access
+The Public Schema (lvh.me) acts as the management layer.
+It hosts the Landing Page, Sign Up Form, and the Global User Database.
+Crucially, the **Tenant** table (the registry of all customers) lives only in the Public Schema.
+
+### 1. Initial System Setup (Seeding)
+
+To set up the environment from scratch (e.g., for development), the system uses a seeding script (often wrapped in a management command like `populate_db`):
+
+1. **Database Reset**: Drop and recreate the application database to ensure a clean slate.
+2. **Shared Migrations**: Run `migrate_schemas --shared` to create tables in the `public` schema.
+3. **Public Tenant Creation**: Initialize the `public` tenant (domain: `lvh.me`).
+4. **Demo Tenant Provisioning**: Iterate through a data file (e.g., `tenants.json`) to:
+    - Create tenant owners (Users).
+    - Call `provision_tenant` to create the schema and domain for each customer.
+    - Link root admin users to new tenants for administrative access.
+
+### 2. Ongoing Administration (Django Admin)
+
+Global Superusers manage the system via the Admin Panel at `http://lvh.me:8000/admin/`.
+
+- **Provisioning Tenants**: Standard "Add" buttons are disabled to prevent misconfiguration. Instead, use the custom **"Provision Tenant"** button on the Tenant List page. This ensures the User, Tenant, and Domain are created correctly in a single transaction.
+- **User Management**: Users are global. Deleting a user from the Public Admin removes them from **all** tenants (`delete_user_globally`).
+- **Impersonation**: Superusers can "Login as" any user to troubleshoot issues within specific tenant contexts.
+
+## User Onboarding Workflow
+
+- User visits lvh.me:8000/accounts/signup/ (Public Schema).
+- User creates account: Added to tenants_user (Global) and linked to Public Tenant (so they can view the onboarding page).
+- User fills Onboarding Form:
+- App creates new Tenant (e.g., mycompany).
+- App creates new Domain (mycompany.lvh.me).
+- App switches context to mycompany schema -> Creates "First Project".
+- Redirect: User is sent to mycompany.lvh.me:8000/ to start working.

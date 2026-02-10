@@ -1,12 +1,13 @@
 # tenants/utils.py
 
 # Import standard libraries
-from typing import Any, Tuple, cast
+from typing import Any, cast
 from django.core.exceptions import ValidationError
 from django.db import connection, models, ProgrammingError
 from django.db.models.fields.reverse_related import ManyToOneRel
 
 # Import django libraries
+from django.contrib.auth.models import UserManager
 from django.db import transaction
 from django.http import HttpRequest
 from django_tenants.utils import schema_context
@@ -20,7 +21,7 @@ from tenants.models import Domain, Tenant, User
 from tasks.models import Project, Task
 
 
-def create_tenant(tenant_data: dict[str, Any]) -> Tuple[Tenant, Domain]:
+def create_tenant(tenant_data: dict[str, Any]):
     """
     Create a new tenant with proper schema and domain setup.
 
@@ -41,11 +42,12 @@ def create_tenant(tenant_data: dict[str, Any]) -> Tuple[Tenant, Domain]:
         try:
             tenant_owner = User.objects.get(email=tenant_data["email"])
         except User.DoesNotExist:
-            tenant_owner = User.objects.create(
+            tenant_owner = cast(UserManager, User.objects).create_user(
+                username=tenant_data["email"],
                 email=tenant_data["email"],
                 password=tenant_data["password"],
-                is_verified=True,
             )
+            tenant_owner.is_verified = True
             tenant_owner.save()
 
         # Create the tenant using django-tenant-users provision_tenant

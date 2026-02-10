@@ -1,11 +1,16 @@
 # tenants/admin.py
 
 # Import standard libraries
+from typing import Any
 
 # Import django libraries
 from django import forms
+from django.conf import settings
 from django.contrib import admin
+from django.contrib.admin import helpers
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import connection
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
@@ -16,7 +21,7 @@ from tenant_users.permissions.models import UserTenantPermissions
 
 # Import local modules
 from tenants.models import Domain, Tenant, User
-from tenants.utils import delete_user_globally
+from tenants.utils import create_tenant, delete_user_globally
 
 
 class UserAdminForm(forms.ModelForm):
@@ -128,12 +133,28 @@ class UserAdmin(admin.ModelAdmin):
         ),
     ]
 
+    actions = ["delete_users_action"]
+
     def get_list_display(self, request):
-        list_display = list(super().get_list_display(request))
-        # Only show hijack button to global superusers
+        list_display: list[Any] = list(super().get_list_display(request))
+
         if not getattr(request.user, "is_global_superuser", False):
+            # Only show hijack button to global superusers
             if "hijack_user_display" in list_display:
                 list_display.remove("hijack_user_display")
+        else:
+            # Hide hijack button for the current user (self)
+            def hijack_wrapper(obj):
+                if obj.pk == request.user.pk:
+                    return "-"
+                return self.hijack_user_display(obj)
+
+            hijack_wrapper.short_description = "Impersonate"
+
+            if "hijack_user_display" in list_display:
+                index = list_display.index("hijack_user_display")
+                list_display[index] = hijack_wrapper
+
         return list_display
 
     def get_queryset(self, request):
@@ -142,6 +163,19 @@ class UserAdmin(admin.ModelAdmin):
         if connection.schema_name != "public":
             return qs.filter(tenants__schema_name=connection.schema_name)
         return qs
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if "delete_selected" in actions:
+            del actions["delete_selected"]
+        return actions
+
+    def has_add_permission(self, request):
+        """
+        Disable manual user creation in Admin.
+        Users should be created via Signup or Invitation to ensure proper tenant association.
+        """
+        return False
 
     def has_change_permission(self, request, obj=None):
         if not super().has_change_permission(request, obj):
@@ -237,6 +271,12 @@ class UserAdmin(admin.ModelAdmin):
 
     def hijack_user_view(self, request, object_id):
         user = get_object_or_404(User, pk=object_id)
+        if user == request.user:
+            self.message_user(
+                request, "You cannot impersonate yourself.", messages.WARNING
+            )
+            return HttpResponseRedirect(reverse("admin:tenants_user_changelist"))
+
         context = {
             **self.admin_site.each_context(request),
             "title": f"Login as {user.email}",
@@ -254,6 +294,75 @@ class UserAdmin(admin.ModelAdmin):
 
     hijack_user_display.short_description = "Impersonate"
 
+    @admin.action(description="Delete selected users")
+    def delete_users_action(self, request, queryset):
+        """
+        Custom action to delete users safely, bypassing the standard collector
+        which fails on public schema due to missing tenant tables.
+        """
+        if request.POST.get("post"):
+            deleted_count = 0
+            for user in queryset:
+                try:
+                    delete_user_globally(user)
+                    deleted_count += 1
+                except ValidationError as e:
+                    self.message_user(request, str(e), messages.ERROR)
+                except Exception as e:
+                    self.message_user(
+                        request, f"Error deleting {user.email}: {e}", messages.ERROR
+                    )
+
+            if deleted_count > 0:
+                self.message_user(
+                    request,
+                    f"Successfully deleted {deleted_count} users.",
+                    messages.SUCCESS,
+                )
+            return None
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Are you sure?",
+            "deletable_objects": [f"{u.email}" for u in queryset],
+            "queryset": queryset,
+            "opts": self.opts,
+            "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
+            "media": self.media,
+        }
+        return render(
+            request, "admin/tenants/user/delete_selected_confirmation.html", context
+        )
+
+
+class ProvisionTenantForm(forms.Form):
+    """Form for provisioning a new tenant (User+Tenant+Domain) from Admin."""
+
+    name = forms.CharField(
+        label="Tenant Name", max_length=100, help_text="Public display name"
+    )
+    subdomain = forms.CharField(
+        label="Subdomain",
+        max_length=63,
+        help_text="Lowercase letters and numbers only. This will be the schema name.",
+        validators=[
+            RegexValidator(
+                r"^[a-z0-9]+$", "Only lowercase letters and numbers are allowed."
+            )
+        ],
+    )
+    email = forms.EmailField(label="Owner Email")
+    password = forms.CharField(widget=forms.PasswordInput, label="Owner Password")
+
+    def clean_subdomain(self):
+        subdomain = self.cleaned_data["subdomain"].lower()
+        reserved_names = getattr(settings, "TENANT_SUBDOMAIN_RESERVED_NAMES", [])
+        if subdomain in reserved_names:
+            raise forms.ValidationError(f"'{subdomain}' is a reserved name.")
+        if Tenant.objects.filter(schema_name=subdomain).exists():
+            raise forms.ValidationError("A tenant with this subdomain already exists.")
+        return subdomain
+
 
 @admin.register(Tenant)
 class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
@@ -269,6 +378,13 @@ class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
     list_display_links: list[str] = ["name"]
     search_fields: list[str] = ["name", "schema_name", "owner__email"]
     list_filter = ["created_at"]
+
+    def has_add_permission(self, request):
+        """
+        Disable manual tenant creation in Admin.
+        Tenants should be created via Onboarding to ensure Domain and Owner setup.
+        """
+        return False
 
     def delete_model(self, request, obj) -> None:
         # Force delete the tenant, bypassing django-tenant-users safety checks
@@ -300,6 +416,51 @@ class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
 
     domains_display.short_description = "Domain / Admin"
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "provision/",
+                self.admin_site.admin_view(self.provision_view),
+                name="tenants_tenant_provision",
+            ),
+        ]
+        return custom_urls + urls
+
+    def provision_view(self, request):
+        if request.method == "POST":
+            form = ProvisionTenantForm(request.POST)
+            if form.is_valid():
+                try:
+                    tenant_data = {
+                        "name": form.cleaned_data["name"],
+                        "schema_name": form.cleaned_data["subdomain"],
+                        "subdomain": form.cleaned_data["subdomain"],
+                        "email": form.cleaned_data["email"],
+                        "password": form.cleaned_data["password"],
+                    }
+                    create_tenant(tenant_data)
+                    self.message_user(
+                        request, "Tenant provisioned successfully.", messages.SUCCESS
+                    )
+                    return HttpResponseRedirect(
+                        reverse("admin:tenants_tenant_changelist")
+                    )
+                except Exception as e:
+                    self.message_user(
+                        request, f"Error provisioning tenant: {e}", messages.ERROR
+                    )
+        else:
+            form = ProvisionTenantForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "form": form,
+            "title": "Provision New Tenant",
+        }
+        return render(request, "admin/tenants/tenant/provision_form.html", context)
+
 
 @admin.register(Domain)
 class DomainAdmin(admin.ModelAdmin):
@@ -309,3 +470,10 @@ class DomainAdmin(admin.ModelAdmin):
     list_display_links: list[str] = ["id", "domain"]
     search_fields: list[str] = ["domain"]
     list_filter = ["is_primary"]
+
+    def has_add_permission(self, request):
+        """
+        Disable manual domain creation in Admin.
+        Domains are provisioned automatically with Tenants.
+        """
+        return False

@@ -1,0 +1,13 @@
+<!-- templates/admin/tenants/tenant/change_list.html -->
+{% extends "admin/change_list.html" %}
+
+{% load i18n %}
+
+{% block object-tools-items %}
+<li>
+  <a href="{% url 'admin:tenants_tenant_provision' %}" class="addlink"
+    >Provision Tenant</a
+  >
+</li>
+{{ block.super }}
+{% endblock %}

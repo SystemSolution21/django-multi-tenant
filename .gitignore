@@ -1,17 +1,33 @@
+# Project specific
 .idea/
 
+# Python cache files
 *.pyc
 __pycache__
 
+# Virtual Environments
 .env
 .env/
 venv/
 .venv/
 
+# Database files
+*.db
 *.sqlite3
-media/
+
+# Media files
+media/*
+!media/.gitkeep
+
+# Static files
 staticfiles
 
+# Mac
 .DS_Store
 
-notes.txt
+# Logs
+logs/*
+!logs/.gitkeep
+
+# ToDo
+ToDo.md

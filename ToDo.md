@@ -13,3 +13,7 @@
 - add a "Maintenance Mode" to the Global Admin Workflow that temporarily disables access to specific tenants?
 
 - create a dashboard widget for the admin panel that shows real-time tenant statistics like total users and active projects?
+
+- add a "System Health" dashboard widget to the admin index that checks if the public tenant and domain are correctly configured?
+
+- create a custom management command `repair_public_tenant` to restore the public tenant if it was accidentally corrupted?

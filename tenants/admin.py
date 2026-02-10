@@ -192,6 +192,9 @@ class UserAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         if not super().has_delete_permission(request, obj):
             return False
+        # Prevent deleting oneself
+        if obj and obj == request.user:
+            return False
         # Prevent tenant admins from deleting global superusers
         if (
             obj
@@ -303,6 +306,12 @@ class UserAdmin(admin.ModelAdmin):
         if request.POST.get("post"):
             deleted_count = 0
             for user in queryset:
+                if user == request.user:
+                    self.message_user(
+                        request, "You cannot delete yourself.", messages.ERROR
+                    )
+                    continue
+
                 try:
                     delete_user_globally(user)
                     deleted_count += 1
@@ -385,6 +394,11 @@ class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
         Tenants should be created via Onboarding to ensure Domain and Owner setup.
         """
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.schema_name == "public":
+            return False
+        return super().has_delete_permission(request, obj)
 
     def delete_model(self, request, obj) -> None:
         # Force delete the tenant, bypassing django-tenant-users safety checks
@@ -477,3 +491,8 @@ class DomainAdmin(admin.ModelAdmin):
         Domains are provisioned automatically with Tenants.
         """
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.tenant.schema_name == "public":
+            return False
+        return super().has_delete_permission(request, obj)

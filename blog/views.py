@@ -1,5 +1,9 @@
 # blog/views.py
 
+# Import standard libraries
+import logging
+from logging import Logger
+
 # Import django libraries
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -21,6 +25,8 @@ from rest_framework import viewsets
 from blog.models import Article
 from blog.serializers import ArticleSerializer
 
+# Initialize logger
+logger: Logger = logging.getLogger(name=__name__)
 
 # ============================================================================
 # REST API Views
@@ -53,6 +59,7 @@ class ArticleListView(ListView):
 
     def get_queryset(self) -> QuerySet[Article]:
         """Get all articles ordered by creation date."""
+
         return Article.objects.all().order_by("-created_at")
 
 
@@ -78,8 +85,12 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         """Add success message on article creation."""
-        messages.success(self.request, "Article created successfully!")
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        messages.success(request=self.request, message="Article created successfully!")
+        logger.info(
+            f"Created blog titled '{form.instance.title}' (ID: {form.instance.pk})"
+        )
+        return response
 
 
 class ArticleUpdateView(LoginRequiredMixin, UpdateView):

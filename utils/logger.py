@@ -1,8 +1,47 @@
 # utils/app_logger.py
 
 # Import standard libraries
+import logging
+import threading
 from pathlib import Path
 from typing import Any
+
+_thread_locals = threading.local()
+
+
+class RequestMiddleware:
+    """
+    Middleware to store the current request in thread-local storage.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        _thread_locals.request = request
+        try:
+            response = self.get_response(request)
+        finally:
+            # Clean up to prevent memory leaks/pollution
+            if hasattr(_thread_locals, "request"):
+                del _thread_locals.request
+        return response
+
+
+class RequestFilter(logging.Filter):
+    """
+    Filter to inject request information (user ID, path) into log records.
+    """
+
+    def filter(self, record):
+        request = getattr(_thread_locals, "request", None)
+        record.user_id = (
+            request.user.email
+            if request and hasattr(request, "user") and request.user.is_authenticated
+            else "system"
+        )
+        record.path = getattr(request, "path", "N/A") if request else "N/A"
+        return True
 
 
 def get_logging_config(
@@ -40,19 +79,26 @@ def get_logging_config(
     return {
         "version": 1,
         "disable_existing_loggers": False,
+        "filters": {
+            "request_context": {
+                "()": "utils.logger.RequestFilter",
+            },
+        },
         "formatters": {
             "verbose": {
-                "format": "{levelname} {asctime} {module} {message}",
+                "format": "{levelname} {asctime} {module} [user:{user_id}] [path:{path}] {message}",
                 "style": "{",
             },
         },
         "handlers": {
             "console": {
+                "filters": ["request_context"],
                 "class": "logging.StreamHandler",
                 "level": console_log_level.upper(),
                 "formatter": "verbose",
             },
             "rotating_app_log": {
+                "filters": ["request_context"],
                 "level": "INFO",
                 "class": "logging.handlers.RotatingFileHandler",
                 "filename": str(logs_dir / "app.log"),
@@ -61,6 +107,7 @@ def get_logging_config(
                 "backupCount": 5,
             },
             "rotating_error_log": {
+                "filters": ["request_context"],
                 "level": "ERROR",
                 "class": "logging.handlers.RotatingFileHandler",
                 "filename": str(logs_dir / "error.log"),

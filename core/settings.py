@@ -90,9 +90,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "utils.logger.RequestMiddleware",  # Captures request for logging
     "hijack.middleware.HijackUserMiddleware",  # Hijack middleware
-    # "tenant_users.tenants.middleware.TenantAccessMiddleware",  # django-tenant-users
-    "core.middleware.PublicTenantAccessMiddleware",  # custom middleware inhereitance of tenant-users
+    "core.middleware.PublicTenantAccessMiddleware",  # custom middleware inheritance of tenant-users
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

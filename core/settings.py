@@ -14,6 +14,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 # Import standard libraries
 import os
 from pathlib import Path
+from typing import Any
 
 # Import django libraries and modules
 from django.contrib.messages import constants as messages
@@ -21,24 +22,30 @@ from django.contrib.messages import constants as messages
 # Import third-party libraries and modules
 from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Import local modules
+from utils.logger import get_logging_config
 
-# Load environment variables from .env file
+# Project base directory
+BASE_DIR: Path = Path(__file__).resolve().parent.parent
+
+# Load environment variables
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(key="SECRET_KEY", default="your-secret-key")
+SECRET_KEY: str = os.getenv(key="SECRET_KEY", default="your-secret-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv(key="DEBUG", default="True") == "True"
+DEBUG: bool = os.getenv(key="DEBUG", default="True") == "True"
+
+# Set console log level from environment variable, defaulting to INFO
+CONSOLE_LOG_LEVEL: str = os.getenv(key="CONSOLE_LOG_LEVEL", default="INFO")
 
 ALLOWED_HOSTS = [
     host.strip("\"[]'")
-    for host in os.getenv(key="ALLOWED_HOSTS", default="*").split(",")
+    for host in os.getenv(key="ALLOWED_HOSTS", default="*").split(sep=",")
 ]
 
 # Application definition (public/shared apps only)
@@ -140,7 +147,7 @@ DATABASE_ROUTERS = ["django_tenants.routers.TenantSyncRouter"]
 # Show public tenant (no other tenant found)
 SHOW_PUBLIC_IF_NO_TENANT_FOUND = False
 
-BASE_DOMAIN = os.getenv("BASE_DOMAIN", "lvh.me")
+BASE_DOMAIN: str = os.getenv(key="BASE_DOMAIN", default="lvh.me")
 
 # Allow session cookies to be shared across subdomains (e.g., demo1.localhost and demo2.localhost)
 # This requires to access the site via BASE_DOMAIN
@@ -172,7 +179,7 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Django-tenant-users settings
-TENANT_USERS_DOMAIN = BASE_DOMAIN
+TENANT_USERS_DOMAIN: str = BASE_DOMAIN
 
 AUTHENTICATION_BACKENDS = [
     "tenant_users.permissions.backend.UserBackend",
@@ -236,7 +243,7 @@ if not DEBUG:
     }
 
 # Media files (user uploaded files)
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT: Path = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
 # Default primary key field type
@@ -258,3 +265,11 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # for developm
 # Redirects after login and logout
 LOGIN_REDIRECT_URL = "index"
 LOGOUT_REDIRECT_URL = "index"
+
+
+# Logging configuration
+LOGGING: dict[str, Any] = get_logging_config(
+    base_dir=BASE_DIR,
+    app_names=["accounts", "blog", "tasks", "tenants"],
+    console_log_level=CONSOLE_LOG_LEVEL,
+)

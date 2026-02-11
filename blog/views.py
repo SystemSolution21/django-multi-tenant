@@ -1,8 +1,7 @@
 # blog/views.py
 
 # Import standard libraries
-import logging
-from logging import Logger
+from typing import cast
 
 # Import django libraries
 from django.contrib import messages
@@ -21,12 +20,15 @@ from django.views.generic import (
 )
 from rest_framework import viewsets
 
+# Import third-party libraries
+import structlog
+
 # Import local modules
 from blog.models import Article
 from blog.serializers import ArticleSerializer
 
 # Initialize logger
-logger: Logger = logging.getLogger(name=__name__)
+logger = structlog.get_logger(__name__)
 
 # ============================================================================
 # REST API Views
@@ -84,11 +86,15 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("article_list")
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
-        """Add success message on article creation."""
+        """Add success message on article creation and log the event."""
+
         response = super().form_valid(form)
         messages.success(request=self.request, message="Article created successfully!")
         logger.info(
-            f"Created blog titled '{form.instance.title}' (ID: {form.instance.pk})"
+            "article_created",
+            title=form.instance.title,
+            article_id=form.instance.pk,
+            user_id=self.request.user.pk,
         )
         return response
 
@@ -104,9 +110,17 @@ class ArticleUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy("article_list")
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
-        """Add success message on article update."""
+        """Add success message on article update and log the event."""
+
         messages.success(self.request, "Article updated successfully!")
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        logger.info(
+            "article_updated",
+            title=form.instance.title,
+            article_id=form.instance.pk,
+            user_id=self.request.user.pk,
+        )
+        return response
 
 
 class ArticleDeleteView(LoginRequiredMixin, DeleteView):
@@ -118,7 +132,20 @@ class ArticleDeleteView(LoginRequiredMixin, DeleteView):
     template_name = "blog/article_confirm_delete.html"
     success_url = reverse_lazy("article_list")
 
-    def delete(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        """Add success message on article deletion."""
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        """
+        Override post to log the deletion event before the object is deleted.
+        """
+        self.object = self.get_object()
+        article = cast(Article, self.object)
+
+        logger.info(
+            "article_deleted",
+            title=article.title,
+            article_id=article.pk,
+            user_id=request.user.pk,
+        )
         messages.success(request, "Article deleted successfully!")
-        return super().delete(request, *args, **kwargs)
+
+        # The parent's post() method calls the original delete().
+        return super().post(request, *args, **kwargs)

@@ -1,47 +1,50 @@
-# utils/app_logger.py
+# utils/logger.py
 
 # Import standard libraries
 import logging
-import threading
 from pathlib import Path
 from typing import Any
 
-_thread_locals = threading.local()
+# Import third-party libraries
+import structlog
 
 
-class RequestMiddleware:
+def configure_structlog():
     """
-    Middleware to store the current request in thread-local storage.
+    Configure structlog processors and factory.
+    """
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.UnicodeDecoder(),
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+
+
+class RequireUserFilter(logging.Filter):
+    """
+    Filter to only allow log records that have a user_id attribute,
+    which is added by structlog processors.
     """
 
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        _thread_locals.request = request
-        try:
-            response = self.get_response(request)
-        finally:
-            # Clean up to prevent memory leaks/pollution
-            if hasattr(_thread_locals, "request"):
-                del _thread_locals.request
-        return response
-
-
-class RequestFilter(logging.Filter):
-    """
-    Filter to inject request information (user ID, path) into log records.
-    """
-
-    def filter(self, record):
-        request = getattr(_thread_locals, "request", None)
-        record.user_id = (
-            request.user.email
-            if request and hasattr(request, "user") and request.user.is_authenticated
-            else "system"
-        )
-        record.path = getattr(request, "path", "N/A") if request else "N/A"
-        return True
+    def filter(self, record) -> bool:
+        # structlog processors add context and explicit log k-v pairs as
+        # attributes on the LogRecord. We just need to check for existence.
+        # structlog passes the event dictionary as record.msg when using wrap_for_formatter.
+        # We need to check if user_id is present in that dictionary.
+        if isinstance(record.msg, dict):
+            return "user_id" in record.msg
+        return hasattr(record, "user_id")
 
 
 def get_logging_config(
@@ -59,6 +62,9 @@ def get_logging_config(
     """
     if app_names is None:
         app_names = []
+
+    # Ensure structlog is configured
+    configure_structlog()
 
     # Project base directory
     base_dir = Path(base_dir)
@@ -80,47 +86,56 @@ def get_logging_config(
         "version": 1,
         "disable_existing_loggers": False,
         "filters": {
-            "request_context": {
-                "()": "utils.logger.RequestFilter",
+            "require_user": {
+                "()": "utils.logger.RequireUserFilter",
             },
         },
         "formatters": {
-            "verbose": {
-                "format": "{levelname} {asctime} {module} [user:{user_id}] [path:{path}] {message}",
-                "style": "{",
+            "json_formatter": {
+                "()": structlog.stdlib.ProcessorFormatter,
+                "processor": structlog.processors.JSONRenderer(),
+            },
+            "console_formatter": {
+                "()": structlog.stdlib.ProcessorFormatter,
+                "processor": structlog.dev.ConsoleRenderer(),
             },
         },
         "handlers": {
             "console": {
-                "filters": ["request_context"],
                 "class": "logging.StreamHandler",
                 "level": console_log_level.upper(),
-                "formatter": "verbose",
+                "formatter": "console_formatter",
             },
             "rotating_app_log": {
-                "filters": ["request_context"],
+                # Only log to file if user is present (as per requirement)
+                "filters": ["require_user"],
                 "level": "INFO",
                 "class": "logging.handlers.RotatingFileHandler",
                 "filename": str(logs_dir / "app.log"),
-                "formatter": "verbose",
+                "formatter": "json_formatter",
                 "maxBytes": 1024 * 1024 * 5,  # 5 MB
                 "backupCount": 5,
             },
             "rotating_error_log": {
-                "filters": ["request_context"],
                 "level": "ERROR",
                 "class": "logging.handlers.RotatingFileHandler",
                 "filename": str(logs_dir / "error.log"),
-                "formatter": "verbose",
+                "formatter": "json_formatter",
                 "maxBytes": 1024 * 1024 * 5,  # 5 MB
                 "backupCount": 5,
             },
         },
         "loggers": {
             "django": {
-                "handlers": ["console", "rotating_app_log", "rotating_error_log"],
-                "level": "INFO",
-                "propagate": True,
+                # Django's internal logs should go to console and error file, but not the user-action app.log
+                "handlers": ["console", "rotating_error_log"],
+                "level": "INFO",  # Use "WARNING" in production to reduce noise
+                "propagate": False,
+            },
+            "django_structlog": {
+                "handlers": ["console", "rotating_error_log"],
+                "level": "WARNING",  # Quiets the INFO-level request_started/finished logs
+                "propagate": False,
             },
             **custom_loggers,
         },

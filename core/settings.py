@@ -53,8 +53,9 @@ SHARED_APPS = [
     "django_tenants",  # django-tenants
     "hijack",  # Impersonation
     "hijack.contrib.admin",  # Hijack admin integration
-    "crispy_forms",
-    "crispy_bootstrap5",
+    "crispy_forms",  # Crispy forms for forms rendering
+    "crispy_bootstrap5",  # Crispy forms for bootstrap 5
+    "django_structlog",  # Structured logging
     "core.apps.CoreConfig",  # local core app
     "core.apps.CustomAdminConfig",  # Custom admin configuration
     "django.contrib.auth",
@@ -62,17 +63,17 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
-    "django_filters",
+    "rest_framework",  # REST framework for API
+    "django_filters",  # Django filtering querysets
     "tenants.apps.TenantsConfig",  # local tenants app
     "accounts.apps.AccountsConfig",  # local accounts app
     "blog.apps.BlogConfig",  # local blog app
-    "tenant_users.tenants",  # django-tenant-users
+    "tenant_users.tenants",  # django-tenant-users for shared user pool
 ]
 
 # Application definition (tenant apps only)
 TENANT_APPS = [
-    "tenant_users.permissions",  # django-tenant-users
+    "tenant_users.permissions",  # django-tenant-users for per-tenant permissions
     "tasks.apps.TasksConfig",  # local tasks app
 ]
 
@@ -83,15 +84,15 @@ INSTALLED_APPS = list(SHARED_APPS) + [
 
 # Middleware
 MIDDLEWARE = [
-    "django_tenants.middleware.main.TenantMainMiddleware",  # django-tenants
+    "django_tenants.middleware.main.TenantMainMiddleware",  # django-tenants middleware for tenant resolution
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # whitenoise for static files in production
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "utils.logger.RequestMiddleware",  # Captures request for logging
-    "hijack.middleware.HijackUserMiddleware",  # Hijack middleware
+    "django_structlog.middlewares.RequestMiddleware",  # django-structlog middleware for request logging
+    "hijack.middleware.HijackUserMiddleware",  # Hijack middleware for impersonation
     "core.middleware.PublicTenantAccessMiddleware",  # custom middleware inheritance of tenant-users
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

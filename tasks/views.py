@@ -4,11 +4,13 @@
 from typing import TYPE_CHECKING, cast
 
 # Import django libraries
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.models import Q, QuerySet
 from django.forms import ModelChoiceField
+from django.http import HttpRequest, HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -19,11 +21,16 @@ from django.views.generic import (
 )
 from rest_framework.viewsets import ModelViewSet
 
+# Import third-party libraries
+import structlog
+
 # Import local modules
 from tasks.models import Project, Task
 from tasks.serializers import ProjectSerializer, TaskSerializer
 from tenants.mixins import TenantSchemaRequiredMixin
 
+# Initialize logger
+logger = structlog.get_logger(__name__)
 
 # ============================================================================
 # API ViewSets (REST Framework)
@@ -102,11 +109,22 @@ class ProjectCreateView(LoginRequiredMixin, TenantSchemaRequiredMixin, CreateVie
             )
         return form
 
-    def form_valid(self, form):
+    def form_valid(self, form) -> HttpResponse:
         # Set the owner to current user if not specified
         if not form.instance.owner:
             form.instance.owner = self.request.user
-        return super().form_valid(form)
+
+        # Save the project
+        response: HttpResponse = super().form_valid(form=form)
+
+        messages.success(request=self.request, message="Project created successfully!")
+        logger.info(
+            "Project created",
+            project=form.instance.name,
+            project_id=form.instance.pk,
+            user_id=self.request.user.pk,
+        )
+        return response
 
 
 class ProjectUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateView):
@@ -127,6 +145,17 @@ class ProjectUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateVie
             )
         return form
 
+    def form_valid(self, form) -> HttpResponse:
+        response: HttpResponse = super().form_valid(form=form)
+        messages.success(request=self.request, message="Project updated successfully!")
+        logger.info(
+            "Project updated",
+            project=form.instance.name,
+            project_id=form.instance.pk,
+            user_id=self.request.user.pk,
+        )
+        return response
+
 
 class ProjectDeleteView(LoginRequiredMixin, TenantSchemaRequiredMixin, DeleteView):
     """Delete a project."""
@@ -134,6 +163,22 @@ class ProjectDeleteView(LoginRequiredMixin, TenantSchemaRequiredMixin, DeleteVie
     model = Project
     template_name = "tasks/project_confirm_delete.html"
     success_url = reverse_lazy("project_list")
+
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        """
+        Override post to log the deletion event before the object is deleted.
+        """
+        self.object = self.get_object()
+        project = cast(Project, self.object)
+        messages.success(request=self.request, message="Project deleted successfully!")
+        logger.info(
+            "Project deleted",
+            project=project.name,
+            project_id=project.pk,
+            user_id=request.user.pk,
+        )
+        # The parent's post() method calls the original delete().
+        return super().post(request, *args, **kwargs)
 
 
 class TaskListView(LoginRequiredMixin, TenantSchemaRequiredMixin, ListView):
@@ -223,6 +268,22 @@ class TaskCreateView(LoginRequiredMixin, TenantSchemaRequiredMixin, CreateView):
             )
         return form
 
+    def form_valid(self, form) -> HttpResponse:
+        response: HttpResponse = super().form_valid(form=form)
+        messages.success(request=self.request, message="Task created successfully!")
+        logger.info(
+            "Task created",
+            task=form.instance.name,
+            task_id=form.instance.pk,
+            project_id=form.instance.project.pk,
+            assignee_id=form.instance.assignee.pk if form.instance.assignee else None,
+            status=form.instance.status,
+            priority=form.instance.priority,
+            due_date=form.instance.due_date.isoformat(),
+            user_id=self.request.user.pk,
+        )
+        return response
+
 
 class TaskUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateView):
     """Update an existing task."""
@@ -250,6 +311,22 @@ class TaskUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateView):
             )
         return form
 
+    def form_valid(self, form) -> HttpResponse:
+        response: HttpResponse = super().form_valid(form=form)
+        messages.success(request=self.request, message="Task updated successfully!")
+        logger.info(
+            "Task updated",
+            task=form.instance.name,
+            task_id=form.instance.pk,
+            project_id=form.instance.project.pk,
+            assignee_id=form.instance.assignee.pk if form.instance.assignee else None,
+            status=form.instance.status,
+            priority=form.instance.priority,
+            due_date=form.instance.due_date.isoformat(),
+            user_id=self.request.user.pk,
+        )
+        return response
+
 
 class TaskDeleteView(LoginRequiredMixin, TenantSchemaRequiredMixin, DeleteView):
     """Delete a task."""
@@ -257,3 +334,20 @@ class TaskDeleteView(LoginRequiredMixin, TenantSchemaRequiredMixin, DeleteView):
     model = Task
     template_name = "tasks/task_confirm_delete.html"
     success_url = reverse_lazy("task_list")
+
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        """
+        Override post to log the deletion event before the object is deleted.
+        """
+        self.object = self.get_object()
+        task = cast(Task, self.object)
+        messages.success(request=self.request, message="Task deleted successfully!")
+        logger.info(
+            "Task deleted",
+            task=task.name,
+            task_id=task.pk,
+            project_id=task.project.pk,
+            user_id=request.user.pk,
+        )
+        # The parent's post() method calls the original delete().
+        return super().post(request=request, *args, **kwargs)

@@ -275,7 +275,13 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         # Prevent inviting users to the public tenant
         if connection.schema_name == "public":
             messages.error(request, "You cannot invite users to the public tenant.")
+            logger.error(
+                event="invite_to_public_tenant_attempted",
+                user_id=request.user.pk,
+                user_name=request.user.full_name,
+            )
             return redirect("user_list")
+
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form) -> HttpResponse:
@@ -294,6 +300,13 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
                 messages.error(
                     request=self.request,
                     message="User is already a member of this tenant.",
+                )
+                logger.error(
+                    event="invite_to_existing_tenant_member_attempted",
+                    user_id=existing_user.pk,
+                    user_name=existing_user.full_name,
+                    invited_by_tenant=user.full_name,
+                    tenant_user_id=user.pk,
                 )
                 return self.form_invalid(form=form)
         except User.DoesNotExist:
@@ -314,6 +327,13 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
                         request=self.request,
                         message=f"An invitation has already been sent to {form.instance.email}.",
                     )
+                    logger.error(
+                        event="invite_to_existing_invitation_attempted",
+                        user_id=existing_user.pk,
+                        user_name=existing_user.full_name,
+                        invited_by_tenant=user.full_name,
+                        tenant_user_id=user.pk,
+                    )
                     return self.form_invalid(form=form)
 
             # Delete any old accepted invitations to avoid unique constraint violation
@@ -323,9 +343,7 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
 
         response: HttpResponse = super().form_valid(form=form)
 
-        # Send invitation email (self.object is now available)
         # Use current tenant domain for invitation URL
-
         with schema_context("public"):
             tenant_domain: Domain | None = Domain.objects.filter(
                 tenant=current_tenant, is_primary=True
@@ -359,6 +377,13 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         messages.success(
             request=self.request, message=f"Invitation sent to {self.object.email}"
         )
+        logger.info(
+            event="invitation_sent",
+            user_id=self.object.pk.hex,
+            user_email=self.object.email,
+            invited_by_tenant=user.full_name,
+            tenant_user_id=user.pk,
+        )
         return response
 
 
@@ -374,6 +399,12 @@ class AcceptInvitationView(View):
 
         if invitation.is_expired:
             messages.error(request, "This invitation has expired.")
+            logger.error(
+                event="invitation_expired",
+                user_email=invitation.email,
+                invited_by_tenant=invitation.invited_by.full_name,
+                tenant_user_id=invitation.invited_by.pk,
+            )
             return redirect("index")
 
         # UX Improvement: Warn immediately if logged in as the wrong user
@@ -381,6 +412,12 @@ class AcceptInvitationView(View):
             messages.warning(
                 request,
                 f"You are logged in as {request.user.email}. This invitation is for {invitation.email}. Please log out and log in as the correct user.",
+            )
+            logger.warning(
+                event="invitation_wrong_user",
+                user_id=request.user.pk,
+                user_email=request.user.email,
+                invited_user_email=invitation.email,
             )
 
         return render(
@@ -394,6 +431,10 @@ class AcceptInvitationView(View):
     def post(self, request, token):
         if not request.user.is_authenticated:
             messages.error(request, "Please log in to accept the invitation.")
+            logger.error(
+                event="invitation_accept_not_logged_in",
+                invited_user_email=request.user.email,
+            )
             return redirect(f"{reverse('login')}?next={request.path}")
 
         # Perform all operations in public schema context
@@ -404,12 +445,24 @@ class AcceptInvitationView(View):
 
             if invitation.is_expired:
                 messages.error(request, "This invitation has expired.")
+                logger.error(
+                    event="invitation_expired",
+                    user_email=invitation.email,
+                    invited_by_tenant=invitation.invited_by.full_name,
+                    tenant_user_id=invitation.invited_by.pk,
+                )
                 return redirect("index")
 
             if request.user.email != invitation.email:
                 messages.error(
                     request,
                     f"You are logged in as {request.user.email}. This invitation is for {invitation.email}. Please log out and try again.",
+                )
+                logger.error(
+                    event="invitation_wrong_user",
+                    user_id=request.user.pk,
+                    user_email=request.user.email,
+                    invited_user_email=invitation.email,
                 )
                 return redirect("index")
 
@@ -435,6 +488,13 @@ class AcceptInvitationView(View):
             ).first()
 
         messages.success(request, f"Welcome to {invitation.tenant.name}!")
+        logger.info(
+            event="invitation_accepted",
+            user_id=request.user.pk,
+            user_email=request.user.email,
+            invited_by_tenant=invitation.invited_by.full_name,
+            tenant_user_id=invitation.invited_by.pk,
+        )
 
         if tenant_domain:
             port = request.get_port()
@@ -506,12 +566,11 @@ class UserEditView(TenantAdminRequiredMixin, UpdateView):
         user: User = cast(User, self.request.user)
         logger.info(
             event="user_updated",
-            updated_user_id=form.instance.pk,
-            updated_user_first_name=form.instance.first_name,
-            updated_user_last_name=form.instance.last_name,
-            updated_user_role=form.instance.role,
-            updated_by=user.full_name,
-            user_id=user.pk,
+            user_id=form.instance.pk,
+            user_name=form.instance.full_name,
+            user_role=form.instance.role,
+            updated_by_tenant=user.full_name,
+            tenant_user_id=user.pk,
         )
         return response
 
@@ -552,8 +611,8 @@ class UserRemoveDeleteView(TenantAdminRequiredMixin, View):
                     event="user_deleted_globally",
                     user_id=user.pk,
                     user_name=user.full_name,
-                    deleted_by=tenant.name,
-                    tenant_id=tenant.pk,
+                    deleted_by_tenant=tenant.name,
+                    tenant_user_id=tenant.pk,
                 )
             except ValidationError as e:
                 messages.error(request=request, message=str(e))
@@ -581,8 +640,8 @@ class UserRemoveDeleteView(TenantAdminRequiredMixin, View):
                 event="user_removed_from_tenant",
                 user_id=user.pk,
                 user_name=user.full_name,
-                removed_by=tenant.name,
-                tenant_id=tenant.pk,
+                removed_by_tenant=tenant.name,
+                tenant_user_id=tenant.pk,
             )
 
         return HttpResponseRedirect(redirect_to=self.success_url)

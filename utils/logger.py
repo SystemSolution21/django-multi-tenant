@@ -38,10 +38,10 @@ class RequireUserFilter(logging.Filter):
     """
 
     def filter(self, record) -> bool:
-        # structlog processors add context and explicit log k-v pairs as
-        # attributes on the LogRecord. We just need to check for existence.
-        # structlog passes the event dictionary as record.msg when using wrap_for_formatter.
-        # We need to check if user_id is present in that dictionary.
+        # Structlog processors add context and explicit log k-v pairs as
+        # attributes on the LogRecord. Need to check for existence.
+        # Structlog passes the event dictionary as record.msg when using wrap_for_formatter.
+        # We need to check user_id exists in the dictionary.
         if isinstance(record.msg, dict):
             return "user_id" in record.msg
         return hasattr(record, "user_id")
@@ -94,10 +94,18 @@ def get_logging_config(
             "json_formatter": {
                 "()": structlog.stdlib.ProcessorFormatter,
                 "processor": structlog.processors.JSONRenderer(),
+                "foreign_pre_chain": [
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.stdlib.add_log_level,
+                ],
             },
             "console_formatter": {
                 "()": structlog.stdlib.ProcessorFormatter,
                 "processor": structlog.dev.ConsoleRenderer(),
+                "foreign_pre_chain": [
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.stdlib.add_log_level,
+                ],
             },
         },
         "handlers": {

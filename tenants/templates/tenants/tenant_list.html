@@ -2,10 +2,10 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Tenants</h2>
-<a href="{% url 'tenant_create' %}" class="btn btn-primary">Create Tenant</a>
-<table class="table">
+<a href="{% url 'tenant_create' %}" class="btn btn-primary mb-3">Create Tenant</a>
+<table class="table table-bordered table-hover border-dark border-4">
   <thead>
-    <tr>
+    <tr class="bg-light text-dark text-center">
       <th>Name</th>
       <th>Schema</th>
       <th>Created</th>

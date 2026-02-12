@@ -20,7 +20,7 @@ from tenants.api_views import GlobalSearchAPIView
 router = DefaultRouter()
 router.register(prefix="blog", viewset=ArticleViewSet)
 
-# Register URLs
+# Register Public URLs
 urlpatterns: list[Any] = [
     path(route="", view=index_view, name="index"),
     path(route="api/", view=include(router.urls)),

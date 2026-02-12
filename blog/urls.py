@@ -18,12 +18,17 @@ from blog.views import (
     ArticleUpdateView,
 )
 
-# URL patterns
+# Blog URL patterns
 urlpatterns: list[Any] = [
     path(route="", view=ArticleListView.as_view(), name="article_list"),
     path(route="<int:pk>/", view=ArticleDetailView.as_view(), name="article_detail"),
     path(route="create/", view=ArticleCreateView.as_view(), name="article_create"),
-    path(route="<int:pk>/edit/", view=ArticleUpdateView.as_view(), name="article_update"),
-    path(route="<int:pk>/delete/", view=ArticleDeleteView.as_view(), name="article_delete"),
+    path(
+        route="<int:pk>/edit/", view=ArticleUpdateView.as_view(), name="article_update"
+    ),
+    path(
+        route="<int:pk>/delete/",
+        view=ArticleDeleteView.as_view(),
+        name="article_delete",
+    ),
 ]
-

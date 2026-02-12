@@ -45,13 +45,13 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
 
 # ============================================================================
-# Web UI Views (Public Schema Only)
+# Web UI Views
 # ============================================================================
 
 
 class ArticleListView(ListView):
     """
-    List all blog articles (public schema).
+    List all blog articles.
     """
 
     model = Article

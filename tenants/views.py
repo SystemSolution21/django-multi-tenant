@@ -27,6 +27,7 @@ from django.views.generic import (
 from django_tenants.utils import schema_context
 from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
+import structlog
 
 # Import local modules
 from tenants.mixins import TenantAdminRequiredMixin
@@ -36,6 +37,9 @@ from tenants.serializers import TenantSerializer
 from tenants.utils import create_tenant, delete_user_globally
 from blog.models import Article
 from tasks.models import Project, Task
+
+# Initialize logger
+logger = structlog.get_logger(__name__)
 
 
 class TenantListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -496,6 +500,21 @@ class UserEditView(TenantAdminRequiredMixin, UpdateView):
     def get_success_url(self) -> str:
         return reverse(viewname="user_list")
 
+    def form_valid(self, form) -> HttpResponse:
+        response: HttpResponse = super().form_valid(form=form)
+        messages.success(request=self.request, message="User updated successfully.")
+        user: User = cast(User, self.request.user)
+        logger.info(
+            event="user_updated",
+            updated_user_id=form.instance.pk,
+            updated_user_first_name=form.instance.first_name,
+            updated_user_last_name=form.instance.last_name,
+            updated_user_role=form.instance.role,
+            updated_by=user.full_name,
+            user_id=user.pk,
+        )
+        return response
+
 
 class UserRemoveDeleteView(TenantAdminRequiredMixin, View):
     """
@@ -529,6 +548,13 @@ class UserRemoveDeleteView(TenantAdminRequiredMixin, View):
                     request=request,
                     message=f"User {user.email} has been deleted from the system.",
                 )
+                logger.info(
+                    event="user_deleted_globally",
+                    user_id=user.pk,
+                    user_name=user.full_name,
+                    deleted_by=tenant.name,
+                    tenant_id=tenant.pk,
+                )
             except ValidationError as e:
                 messages.error(request=request, message=str(e))
         else:
@@ -550,6 +576,13 @@ class UserRemoveDeleteView(TenantAdminRequiredMixin, View):
             messages.success(
                 request=request,
                 message=f"User {user.email} has been removed from {tenant.name}",
+            )
+            logger.info(
+                event="user_removed_from_tenant",
+                user_id=user.pk,
+                user_name=user.full_name,
+                removed_by=tenant.name,
+                tenant_id=tenant.pk,
             )
 
         return HttpResponseRedirect(redirect_to=self.success_url)

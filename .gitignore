@@ -25,9 +25,9 @@ staticfiles
 # Mac
 .DS_Store
 
-# Logs
-logs/*
-!logs/.gitkeep
+# # Logs
+# logs/*
+# !logs/.gitkeep
 
 # ToDo
 ToDo.md

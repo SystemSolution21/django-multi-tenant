@@ -7,7 +7,7 @@ from typing import Any
 from django.db import connection
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 
 # Import local modules
@@ -74,6 +74,17 @@ def index_view(request) -> JsonResponse | HttpResponse:
                 "schema": connection.schema_name,
             }
         )
+
+    # Resume Onboarding Logic:
+    # If a user is logged in on the public schema but belongs to no specific tenants
+    # (only the public tenant), redirect them to onboarding.
+    if (
+        connection.schema_name == "public"
+        and request.user.is_authenticated
+        and not request.user.is_superuser
+    ):
+        if not request.user.tenants.exclude(schema_name="public").exists():  # type: ignore
+            return redirect("onboarding")
 
     # HTML response for browser requests
     context: dict[str, Any] = {

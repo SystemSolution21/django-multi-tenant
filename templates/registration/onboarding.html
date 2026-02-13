@@ -19,6 +19,12 @@
               <button type="submit" class="btn btn-success btn-lg">Create Workspace & Start</button>
             </div>
           </form>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <div class="d-grid gap-2 mt-4">
+              <button type="submit" class="btn btn-secondary">Cancel & Logout</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

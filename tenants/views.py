@@ -93,7 +93,17 @@ class TenantCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
             "password": "temp_password",
             "root_user": user,
         }
-        create_tenant(tenant_data=tenant_data)
+        tenant, domain = create_tenant(tenant_data=tenant_data)
+        messages.success(request=self.request, message="Tenant created successfully.")
+        logger.info(
+            event="tenant_created",
+            tenant_id=tenant.pk,
+            tenant_name=tenant.name,
+            tenant_schema=tenant.schema_name,
+            tenant_domain=domain.domain,
+            created_by_tenant=user.full_name,
+            tenant_user_id=user.pk,
+        )
         return redirect(to="tenant_list")
 
 

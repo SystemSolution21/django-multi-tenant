@@ -10,7 +10,7 @@ from django.utils.text import slugify
 
 # Import local modules
 from django_tenants.utils import schema_context
-from tenants.models import User, UserInvitation
+from tenants.models import Tenant, User, UserInvitation
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -87,6 +87,12 @@ class OnboardingForm(forms.Form):
         if schema_name in reserved_names:
             raise ValidationError(
                 f"The name '{company_name}' generates a reserved subdomain ('{schema_name}'). Please choose another."
+            )
+
+        # Check if tenant already exists
+        if Tenant.objects.filter(schema_name=schema_name).exists():
+            raise ValidationError(
+                f"The workspace or company name '{company_name}' is already taken. Please choose another."
             )
 
         # Store schema_name in cleaned_data for the view to use

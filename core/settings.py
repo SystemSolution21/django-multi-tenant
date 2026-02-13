@@ -93,7 +93,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django_structlog.middlewares.RequestMiddleware",  # django-structlog middleware for request logging
     "hijack.middleware.HijackUserMiddleware",  # Hijack middleware for impersonation
-    "core.middleware.PublicTenantAccessMiddleware",  # custom middleware inheritance of tenant-users
+    "core.middleware.PublicTenantAccessMiddleware",  # custom middleware inheriting from tenant-users
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

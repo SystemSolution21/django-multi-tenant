@@ -14,10 +14,16 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, FormView
 from django_tenants.utils import schema_context
 
+# Import third-party libraries
+import structlog
+
 # Import local modules
 from .forms import CustomUserCreationForm, OnboardingForm
 from tenants.models import Domain, Tenant, User, UserInvitation
 from tenants.utils import create_tenant, get_public_domain_url
+
+# Initialize logger
+logger = structlog.get_logger()
 
 
 class SignUpView(CreateView):
@@ -90,7 +96,12 @@ class SignUpView(CreateView):
                 user=user,
                 backend="tenant_users.permissions.backend.UserBackend",
             )
-        return response
+            logger.info(
+                event="user_signed_up",
+                user_id=user.pk,
+                user_email=user.email,
+            )
+            return response
 
 
 class OnboardingView(LoginRequiredMixin, FormView):
@@ -145,10 +156,10 @@ class OnboardingView(LoginRequiredMixin, FormView):
 
             # Generate a simple key from the name (e.g., "My Project" -> "MYP")
             key: LiteralString = "".join([c for c in project_name if c.isalnum()])[
-                :3
+                :4
             ].upper()
             if len(key) < 2:
-                key = "PRJ"
+                key = "PROJ"
 
             # Switch to the new tenant context to create the project
             with schema_context(schema_name):
@@ -162,4 +173,10 @@ class OnboardingView(LoginRequiredMixin, FormView):
         if port not in ["80", "443"]:
             domain = f"{domain}:{port}"
 
+        logger.info(
+            event="user_onboarded",
+            user_id=user.pk,
+            user_email=user.email,
+            tenant_name=tenant_data["name"],
+        )
         return redirect(f"http://{domain}/")

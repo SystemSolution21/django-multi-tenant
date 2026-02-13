@@ -99,7 +99,7 @@ class TenantCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 
 class TenantUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """
-    Update an existing tenant.
+    Update an existing tenant. Only the name can be updated.
     """
 
     model = Tenant
@@ -110,10 +110,23 @@ class TenantUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     def test_func(self) -> bool:
         return self.request.user.is_superuser
 
+    def form_valid(self, form) -> HttpResponse:
+        response: HttpResponse = super().form_valid(form=form)
+        user: User = cast(User, self.request.user)
+        messages.success(request=self.request, message="Tenant updated successfully.")
+        logger.info(
+            event="tenant_updated",
+            tenant_id=form.instance.pk,
+            tenant_name=form.instance.name,
+            updated_by_tenant=user.full_name,
+            tenant_user_id=user.pk,
+        )
+        return response
+
 
 class TenantDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     """
-    Delete a tenant.
+    Delete a tenant. Only the public tenant(global superuser) can delate other tenants.
     """
 
     if TYPE_CHECKING:
@@ -130,6 +143,15 @@ class TenantDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
     def form_valid(self, form) -> HttpResponseRedirect:
         success_url: str = self.get_success_url()
+        user: User = cast(User, self.request.user)
+        messages.success(request=self.request, message="Tenant deleted successfully.")
+        logger.info(
+            event="tenant_deleted",
+            tenant_id=self.object.pk,
+            tenant_name=self.object.name,
+            deleted_by_tenant=user.full_name,
+            tenant_user_id=user.pk,
+        )
         self.object.delete(force_drop=True)
         return HttpResponseRedirect(redirect_to=success_url)
 

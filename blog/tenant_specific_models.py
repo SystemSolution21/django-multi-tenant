@@ -1,4 +1,4 @@
-# blog/models.py
+# blog/tenant_specific_models.py
 
 # Import django libraries
 from django.db import models

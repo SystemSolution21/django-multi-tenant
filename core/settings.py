@@ -149,9 +149,10 @@ SHOW_PUBLIC_IF_NO_TENANT_FOUND = False
 
 BASE_DOMAIN: str = os.getenv(key="BASE_DOMAIN", default="lvh.me")
 
-# Allow session cookies to be shared across subdomains (e.g., demo1.localhost and demo2.localhost)
+# Allow session cookies to be shared across subdomains (e.g., demo1.lvh.me and demo2.lvh.me)
 # This requires to access the site via BASE_DOMAIN
-SESSION_COOKIE_DOMAIN = f".{BASE_DOMAIN}"
+SESSION_COOKIE_DOMAIN: str = f".{BASE_DOMAIN}"
+CSRF_COOKIE_DOMAIN: str = f".{BASE_DOMAIN}"
 
 PUBLIC_SCHEMA_NAME = "public"
 
@@ -166,6 +167,40 @@ TENANT_SUBDOMAIN_RESERVED_NAMES: list[str] = [
     "support",
     "help",
     "mail",
+    "accounts",
+    "tasks",
+    "tenants",
+    "tenant",
+    "task",
+    "project",
+    "projects",
+    "articles",
+    "article",
+    "django",
+    "rest",
+    "filters",
+    "crispy",
+    "users",
+    "permissions",
+    "auth",
+    "messages",
+    "static",
+    "media",
+    "templates",
+    "search",
+    "invitations",
+    "accept",
+    "decline",
+    "login",
+    "logout",
+    "signup",
+    "onboarding",
+    "index",
+    "users",
+    "edit",
+    "remove",
+    "hijack",
+    "core",
 ]
 
 AUTH_USER_MODEL = "tenants.User"

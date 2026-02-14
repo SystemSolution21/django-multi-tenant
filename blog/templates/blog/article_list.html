@@ -1,102 +1,41 @@
+
 <!-- blog/templates/blog/article_list.html -->
 {% extends "base.html" %}
-{% block title %}Blog Articles - {{ block.super }}{% endblock %}
 {% block content %}
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Blog Articles</h1>
-    {% if user.is_authenticated %}
-      {% if user.is_global_superuser %}
-        <a href="{% url 'article_create' %}" class="btn btn-primary">
-          <i class="bi bi-plus-circle"></i> New Article
-        </a>
-      {% endif %}
-    {% endif %}
-  </div>
-  <!-- Articles -->
-  {% if articles %}
-    <div class="row">
-      {% for article in articles %}
-        <div class="col-md-12 mb-4">
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">
-                <a href="{% url 'article_detail' article.pk %}" class="text-decoration-none">
-                  {{ article.title }}
-                </a>
-              </h5>
-              <p class="card-text text-muted">
-                <small>
-                  Created: {{ article.created_at|date:"F d, Y" }}
-                  {% if article.updated_at != article.created_at %}
-                    | Updated: {{ article.updated_at|date:"F d, Y" }}
-                  {% endif %}
-                </small>
-              </p>
-              <p class="card-text">
-                {{ article.content|truncatewords:50 }}
-              </p>
-              <div class="d-flex gap-2">
-                <a href="{% url 'article_detail' article.pk %}" class="btn btn-sm btn-outline-primary">
-                  Read More
-                </a>
-                {% if user.is_authenticated %}
-                  {% if user.is_global_superuser %}
-                    <a href="{% url 'article_update' article.pk %}" class="btn btn-sm btn-outline-secondary">
-                      Edit
-                    </a>
-                    <a href="{% url 'article_delete' article.pk %}" class="btn btn-sm btn-outline-danger">
-                      Delete
-                    </a>
-                  {% endif %}
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-    <!-- Pagination -->
-    {% if is_paginated %}
-    <nav aria-label="Page navigation">
-      <ul class="pagination justify-content-center">
-        {% if page_obj.has_previous %}
-        <li class="page-item">
-          <a class="page-link" href="?page=1">First</a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-        </li>
-        {% endif %}
-        <li class="page-item active">
-          <span class="page-link">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-          </span>
-        </li>
-        {% if page_obj.has_next %}
-        <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
-        </li>
-        {% endif %}
-      </ul>
-    </nav>
-    {% endif %}
-  <!-- No articles -->
-  {% else %}
-    <div class="alert alert-info">
-      <h4 class="alert-heading">No Articles Yet</h4>
-      <p>There are no blog articles available at the moment.</p>
-      <hr>
-      {% if user.is_authenticated %}
-        {% if user.is_global_superuser %}
-          <p class="mb-0">
-            <a href="{% url 'article_create' %}" class="btn btn-primary">Create First Article</a>
-          </p>
-        {% endif %}
-      {% endif %}
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Blog Articles</h1>
+  {% if user.is_authenticated %}
+    <a href="{% url 'article_create' %}" class="btn btn-primary">Write Article</a>
   {% endif %}
+</div>
+<!-- article list -->
+<div class="row">
+  {% for article in articles %}
+  <div class="col-md-4 mb-4">
+    <div class="card h-100 shadow-sm">
+      {% if article.featured_image %}
+        <img src="{{ article.featured_image }}" class="card-img-top" alt="{{ article.title }}"
+          style="height: 200px; object-fit: cover;">
+      {% endif %}
+      <div class="card-body">
+        {% if article.category %}
+          <span class="badge bg-info text-dark mb-2">{{ article.category.name }}</span>
+        {% endif %}
+        <h5 class="card-title"><a href="{% url 'article_detail' article.pk %}"
+            class="text-decoration-none text-dark">{{ article.title }}</a></h5>
+        <h6 class="card-subtitle mb-2 text-muted small">{{ article.publish_date|date:"M d, Y" }} by
+          {{ article.author.full_name }}</h6>
+        <p class="card-text">{{ article.excerpt|default:article.content|truncatewords:20 }}</p>
+      </div>
+      <div class="card-footer bg-transparent border-top-0">
+        <a href="{% url 'article_detail' article.pk %}" class="btn btn-outline-primary btn-sm">Read More</a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <p class="text-muted">No articles found.</p>
+  </div>
+  {% endfor %}
+</div>
 {% endblock %}

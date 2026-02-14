@@ -6,7 +6,7 @@
   <h1>{{ object.name }}</h1>
   <div>
     <a href="{% url 'tenant_update' object.pk %}" class="btn btn-outline-primary">Edit</a>
-    {% if object.schema_name != 'public' %}    
+    {% if object.schema_name != 'public' %}
       <a href="{% url 'tenant_delete' object.pk %}" class="btn btn-outline-danger">Delete</a>
     {% endif %}
   </div>
@@ -37,7 +37,7 @@
             {% endif %}
           </dd>
           <dt class="col-sm-3">Created:</dt>
-          <dd class="col-sm-9">{{ object.created_on|date:"F d, Y g:i A" }}</dd>
+          <dd class="col-sm-9">{{ object.created_at|date:"F d, Y g:i A" }}</dd>
         </dl>
       </div>
     </div>
@@ -95,7 +95,7 @@
           <a href="{% url 'tenant_update' object.pk %}" class="btn btn-outline-primary">
             <i class="bi bi-pencil"></i> Edit Tenant
           </a>
-          {% if object.schema_name != 'public' %}    
+          {% if object.schema_name != 'public' %}
             <a href="{% url 'tenant_delete' object.pk %}" class="btn btn-outline-danger">
               <i class="bi bi-trash"></i> Delete Tenant
             </a>
@@ -124,4 +124,3 @@
   <a href="{% url 'tenant_list' %}" class="btn btn-secondary">Back to Tenants</a>
 </div>
 {% endblock %}
-

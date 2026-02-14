@@ -82,12 +82,24 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
 
     model = Article
     template_name = "blog/article_form.html"
-    fields = ["title", "content"]
+    fields = [
+        "title",
+        "slug",
+        "excerpt",
+        "content",
+        "featured_image",
+        "status",
+        "publish_date",
+        "category",
+        "tags",
+    ]
     success_url = reverse_lazy("article_list")
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         """Add success message on article creation and log the event."""
 
+        # Assign current user as author
+        form.instance.author = self.request.user
         response = super().form_valid(form)
         messages.success(request=self.request, message="Article created successfully!")
         logger.info(
@@ -106,8 +118,22 @@ class ArticleUpdateView(LoginRequiredMixin, UpdateView):
 
     model = Article
     template_name = "blog/article_form.html"
-    fields = ["title", "content"]
+    fields = [
+        "title",
+        "slug",
+        "excerpt",
+        "content",
+        "featured_image",
+        "status",
+        "publish_date",
+        "category",
+        "tags",
+    ]
     success_url = reverse_lazy("article_list")
+
+    def get_queryset(self) -> QuerySet[Article]:
+        """Only allow authors to edit their own articles."""
+        return super().get_queryset().filter(author=self.request.user)
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         """Add success message on article update and log the event."""
@@ -131,6 +157,10 @@ class ArticleDeleteView(LoginRequiredMixin, DeleteView):
     model = Article
     template_name = "blog/article_confirm_delete.html"
     success_url = reverse_lazy("article_list")
+
+    def get_queryset(self) -> QuerySet[Article]:
+        """Only allow authors to delete their own articles."""
+        return super().get_queryset().filter(author=self.request.user)
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """

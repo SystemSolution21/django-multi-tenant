@@ -17,7 +17,13 @@ class ArticleSerializer(serializers.ModelSerializer):
         fields: list[str] = [
             "id",
             "title",
+            "slug",
+            "excerpt",
             "content",
+            "status",
+            "author",
+            "category",
+            "tags",
             "created_at",
             "updated_at",
         ]

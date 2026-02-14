@@ -30,11 +30,11 @@
           <dt class="col-sm-4">Domains:</dt>
           <dd class="col-sm-8">
             {% if object.domains.exists %}
-            {% for domain in object.domains.all %}
-            <span class="badge bg-info">{{ domain.domain }}</span>
-            {% endfor %}
+              {% for domain in object.domains.all %}
+              <span class="badge bg-info">{{ domain.domain }}</span>
+              {% endfor %}
             {% else %}
-            <span class="text-muted">No domains</span>
+              <span class="text-muted">No domains</span>
             {% endif %}
           </dd>
           <dt class="col-sm-4">Total Users:</dt>
@@ -42,20 +42,20 @@
             <span class="badge bg-warning text-dark">{{ object.tenantuser_set.count }}</span>
           </dd>
           <dt class="col-sm-4">Created:</dt>
-          <dd class="col-sm-8">{{ object.created_on|date:"F d, Y" }}</dd>
+          <dd class="col-sm-8">{{ object.created_at|date:"F d, Y" }}</dd>
         </dl>
         <!-- Affected Users -->
         {% if object.tenantuser_set.exists %}
-        <div class="alert alert-warning mt-3">
-          <h6>Affected Users:</h6>
-          <ul class="mb-0">
-            {% for tenant_user in object.tenantuser_set.all %}
-            <li>{{ tenant_user.user.email }} ({{ tenant_user.user.first_name }} {{ tenant_user.user.last_name }})</li>
-            {% endfor %}
-          </ul>
-          <p class="mt-2 mb-0"><small>Note: User accounts will not be deleted, only their association with this
-              tenant.</small></p>
-        </div>
+          <div class="alert alert-warning mt-3">
+            <h6>Affected Users:</h6>
+            <ul class="mb-0">
+              {% for tenant_user in object.tenantuser_set.all %}
+                <li>{{ tenant_user.user.email }} ({{ tenant_user.user.first_name }} {{ tenant_user.user.last_name }})</li>
+              {% endfor %}
+            </ul>
+            <p class="mt-2 mb-0"><small>Note: User accounts will not be deleted, only their association with this
+                tenant.</small></p>
+          </div>
         {% endif %}
         <form method="post" class="mt-4">
           {% csrf_token %}

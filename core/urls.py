@@ -9,6 +9,8 @@ from typing import Any
 # Import django libraries
 from django.contrib import admin
 from django.urls import include, path
+from django.templatetags.static import static
+from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 
 # Import local modules
@@ -32,6 +34,7 @@ router.register(prefix="tenants", viewset=TenantViewSet)
 
 # Register web UI URLs
 urlpatterns: list[Any] = [
+    path(route="favicon.ico", view=RedirectView.as_view(url=static("favicon.ico"))),
     path(route="", view=index_view, name="index"),
     path(route="api/", view=include(router.urls)),
     path(route="tenants/", view=include("tenants.urls")),  # Tenants web UI

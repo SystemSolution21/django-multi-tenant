@@ -52,7 +52,6 @@ ALLOWED_HOSTS = [
 SHARED_APPS = [
     "django_tenants",  # django-tenants
     "hijack",  # Impersonation
-    "hijack.contrib.admin",  # Hijack admin integration
     "crispy_forms",  # Crispy forms for forms rendering
     "crispy_bootstrap5",  # Crispy forms for bootstrap 5
     "django_structlog",  # Structured logging

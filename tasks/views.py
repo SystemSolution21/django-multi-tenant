@@ -279,7 +279,9 @@ class TaskCreateView(LoginRequiredMixin, TenantSchemaRequiredMixin, CreateView):
             assignee_id=form.instance.assignee.pk if form.instance.assignee else None,
             status=form.instance.status,
             priority=form.instance.priority,
-            due_date=form.instance.due_date.isoformat(),
+            due_date=form.instance.due_date.isoformat()
+            if form.instance.due_date
+            else None,
             user_id=self.request.user.pk,
         )
         return response
@@ -322,7 +324,9 @@ class TaskUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateView):
             assignee_id=form.instance.assignee.pk if form.instance.assignee else None,
             status=form.instance.status,
             priority=form.instance.priority,
-            due_date=form.instance.due_date.isoformat(),
+            due_date=form.instance.due_date.isoformat()
+            if form.instance.due_date
+            else None,
             user_id=self.request.user.pk,
         )
         return response

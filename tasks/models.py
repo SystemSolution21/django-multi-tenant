@@ -2,6 +2,7 @@
 
 # Import django libraries
 from django.db import models
+from django.utils import timezone
 
 # Import local modules
 from core.models import TimeStampedModel
@@ -80,6 +81,12 @@ class Task(TimeStampedModel):
         # Auto-sync is_done with status
         self.is_done = self.status == "done"
         super().save(*args, **kwargs)
+
+    @property
+    def is_overdue(self) -> bool:
+        if self.due_date and not self.is_done:
+            return self.due_date < timezone.now().date()
+        return False
 
     def __str__(self) -> str:
         return f"[{self.project.key}-{self.pk}] {self.name}"

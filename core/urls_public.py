@@ -24,18 +24,22 @@ router.register(prefix="blog", viewset=ArticleViewSet)
 
 # Register Public URLs
 urlpatterns: list[Any] = [
-    path(route="favicon.ico", view=RedirectView.as_view(url=static("favicon.ico"))),
-    path(route="", view=index_view, name="index"),
-    path(route="api/", view=include(router.urls)),
-    path(route="tenants/", view=include("tenants.urls")),
-    path(route="admin/", view=admin.site.urls),
-    path(route="accounts/", view=include("accounts.urls")),
-    path(route="accounts/", view=include("django.contrib.auth.urls")),
-    path(route="blog/", view=include("blog.urls")),
+    path(
+        route="favicon.ico", view=RedirectView.as_view(url=static("favicon.ico"))
+    ),  # favicon
+    path(route="", view=index_view, name="index"),  # Home page
+    path(route="api/", view=include(router.urls)),  # API routes
+    path(route="tenants/", view=include("tenants.urls")),  # Tenants web UI
+    path(route="admin/", view=admin.site.urls),  # Django admin
+    path(route="accounts/", view=include("accounts.urls")),  # Auth URLs
+    path(
+        route="accounts/", view=include("django.contrib.auth.urls")
+    ),  # Django Auth URLs (password reset, etc.)
+    path(route="blog/", view=include("blog.urls")),  # Blog web UI
     path(
         route="api/global-search/",
         view=GlobalSearchAPIView.as_view(),
         name="global-search",
-    ),
-    path(route="hijack/", view=include("hijack.urls")),
+    ),  # Global search API
+    path(route="hijack/", view=include("hijack.urls")),  # Hijack admin
 ]

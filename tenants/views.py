@@ -411,7 +411,7 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         )
         logger.info(
             event="invitation_sent",
-            user_id=self.object.pk.hex,
+            invitation_id=self.object.pk.hex,
             user_email=self.object.email,
             invited_by_tenant=user.full_name,
             tenant_user_id=user.pk,

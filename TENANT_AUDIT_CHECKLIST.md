@@ -1,4 +1,4 @@
-# TENANT AUDIT CHECKLIST (SaaS / django-tenants + django-tenant-users) ✅
+# TENANT AUDIT CHECKLIST (SaaS / django-tenants + django-tenant-users)  
 
 > Purpose: A quick, repeatable checklist to verify the repository is properly configured for schema-per-tenant SaaS using `django-tenants` and `django-tenant-users`.
 
@@ -11,10 +11,10 @@
 
 ---
 
-## Repository & Dependencies ✅
+## Repository & Dependencies  
 
-- [ ] `django-tenants` present in `pyproject.toml` / lockfile (`django-tenants==x.y.z`)  
-- [ ] `django-tenant-users` present in `pyproject.toml` / lockfile (`django-tenant-users==x.y.z`)  
+- [ ] `django-tenants` present in `pyproject.toml` / lockfile (`django-tenants==3.7.0`)
+- [ ] `django-tenant-users` present in `pyproject.toml` / lockfile (`django-tenant-users==2.1.1`)  
 - [ ] `psycopg2` or `psycopg2-binary` present for Postgres support
 
 ---
@@ -28,7 +28,7 @@
 - [ ] `TENANT_MODEL`, `TENANT_DOMAIN_MODEL` set (`"tenants.Tenant"`, `"tenants.Domain"`)  
 - [ ] `PUBLIC_SCHEMA_NAME` and `PUBLIC_SCHEMA_URLCONF` configured  
 - [ ] `AUTH_USER_MODEL` points to tenant user (e.g., `tenants.User`)  
-- [ ] Auth backend(s) include `tenant_users` backend where required  
+- [ ] `Auth backend(s) include tenant_users` backend where required  
 - [ ] `SESSION_COOKIE_DOMAIN` considered for subdomain session sharing (production)  
 - [ ] `DEBUG`, `ALLOWED_HOSTS`, and secret management set for production readiness
 
@@ -80,7 +80,7 @@
 
 ---
 
-## Tests, QA & CI ✅
+## Tests, QA & CI  
 
 - [ ] Tests exist verifying:
   - tenant isolation (data not accessible across tenants)  

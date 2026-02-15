@@ -74,6 +74,14 @@ class ArticleDetailView(DetailView):
     template_name = "blog/article_detail.html"
     context_object_name = "article"
 
+    def get_object(self, queryset=None):
+        self.obj = super().get_object(queryset)
+        self.obj = cast(Article, self.obj)
+        # Increment view count
+        self.obj.views_count += 1
+        self.obj.save(update_fields=["views_count"])
+        return self.obj
+
 
 class ArticleCreateView(LoginRequiredMixin, CreateView):
     """

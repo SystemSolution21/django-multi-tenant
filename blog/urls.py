@@ -34,9 +34,9 @@ urlpatterns: list[Any] = [
         name="article_delete",
     ),
     path(
-        route="categories/create/",
+        route="category/create/",
         view=CategoryCreateView.as_view(),
         name="category_create",
     ),
-    path(route="tags/create/", view=TagCreateView.as_view(), name="tag_create"),
+    path(route="tag/create/", view=TagCreateView.as_view(), name="tag_create"),
 ]

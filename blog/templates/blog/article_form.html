@@ -6,13 +6,22 @@
   <div class="col-md-8 col-lg-6">
     <div class="card shadow-sm">
       <div class="card-body p-4">
-        <h2 class="card-title mb-4">{% if form.instance.pk %}Edit{% else %}New{% endif %} Article</h2>
+        <h2 class="card-title mb-4">
+          {% if title %}
+            {{ title }}
+          {% else %}
+            {% if form.instance.pk %}Edit{% else %}New{% endif %} Article
+          {% endif %}
+        </h2>
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
-          {{ form|crispy }}
+          {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+          {% endif %}
+          {% crispy form %}
           <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
             <a href="{% url 'article_list' %}" class="btn btn-light me-md-2">Cancel</a>
-            <button type="submit" class="btn btn-success">Save Article</button>
+            <button type="submit" class="btn btn-success">{{ btn_text|default:"Save Article" }}</button>
           </div>
         </form>
       </div>

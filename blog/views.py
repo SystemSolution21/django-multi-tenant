@@ -4,14 +4,14 @@
 from typing import cast
 
 # Import django libraries
-from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
 from django.forms import BaseModelForm
 from django.http import HttpRequest, HttpResponse
-from django.urls import reverse_lazy
+from django.shortcuts import redirect
+from django.urls import reverse, reverse_lazy
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -26,6 +26,7 @@ import structlog
 
 # Import local modules
 from blog.models import Article, Category, Tag
+from blog.forms import ArticleForm, CategoryForm, TagForm
 from blog.serializers import ArticleSerializer
 
 # Initialize logger
@@ -90,28 +91,42 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
     """
 
     model = Article
+    form_class = ArticleForm
     template_name = "blog/article_form.html"
-    fields = [
-        "title",
-        "slug",
-        "excerpt",
-        "content",
-        "featured_image",
-        "status",
-        "publish_date",
-        "category",
-        "tags",
-    ]
     success_url = reverse_lazy("article_list")
 
-    def get_form(self, form_class=None):
-        """Customize the form widget for publish_date."""
-        form = super().get_form(form_class)
-        # Use HTML5 datetime-local input for a browser-native calendar picker
-        form.fields["publish_date"].widget = forms.DateTimeInput(
-            attrs={"type": "datetime-local"}
-        )
-        return form
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Restore form data from session if available (e.g. returning from category creation)
+        if "article_form_data" in self.request.session:
+            kwargs["data"] = self.request.session.pop("article_form_data")
+        kwargs["request"] = self.request
+        return kwargs
+
+    def post(self, request, *args, **kwargs):
+        # Handle custom action buttons (Create Category/Tag)
+        if "action" in request.POST:
+            action = request.POST["action"]
+            if action in ["create_category", "create_tag"]:
+                # Serialize POST data to preserve user input
+                form_data = {}
+                for key, values in request.POST.lists():
+                    if key == "csrfmiddlewaretoken":
+                        continue
+                    # Keep lists for M2M fields (tags) or if multiple values exist
+                    if key == "tags" or len(values) > 1:
+                        form_data[key] = values
+                    else:
+                        form_data[key] = values[0]
+
+                request.session["article_form_data"] = form_data
+
+                if action == "create_category":
+                    return redirect(f"{reverse('category_create')}?next={request.path}")
+                elif action == "create_tag":
+                    return redirect(f"{reverse('tag_create')}?next={request.path}")
+
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         """Add success message on article creation and log the event."""
@@ -135,28 +150,41 @@ class ArticleUpdateView(LoginRequiredMixin, UpdateView):
     """
 
     model = Article
+    form_class = ArticleForm
     template_name = "blog/article_form.html"
-    fields = [
-        "title",
-        "slug",
-        "excerpt",
-        "content",
-        "featured_image",
-        "status",
-        "publish_date",
-        "category",
-        "tags",
-    ]
     success_url = reverse_lazy("article_list")
 
-    def get_form(self, form_class=None):
-        """Customize the form widget for publish_date."""
-        form = super().get_form(form_class)
-        # Use HTML5 datetime-local input for a browser-native calendar picker
-        form.fields["publish_date"].widget = forms.DateTimeInput(
-            attrs={"type": "datetime-local"}
-        )
-        return form
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Restore form data from session if available
+        if "article_form_data" in self.request.session:
+            kwargs["data"] = self.request.session.pop("article_form_data")
+        kwargs["request"] = self.request
+        return kwargs
+
+    def post(self, request, *args, **kwargs):
+        # Handle custom action buttons (Create Category/Tag)
+        if "action" in request.POST:
+            action = request.POST["action"]
+            if action in ["create_category", "create_tag"]:
+                # Serialize POST data to preserve user input
+                form_data = {}
+                for key, values in request.POST.lists():
+                    if key == "csrfmiddlewaretoken":
+                        continue
+                    if key == "tags" or len(values) > 1:
+                        form_data[key] = values
+                    else:
+                        form_data[key] = values[0]
+
+                request.session["article_form_data"] = form_data
+
+                if action == "create_category":
+                    return redirect(f"{reverse('category_create')}?next={request.path}")
+                elif action == "create_tag":
+                    return redirect(f"{reverse('tag_create')}?next={request.path}")
+
+        return super().post(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Article]:
         """Only allow authors to edit their own articles."""
@@ -214,9 +242,18 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
     """
 
     model = Category
-    fields = ["name", "description"]
+    form_class = CategoryForm
     template_name = "blog/article_form.html"  # Reusing the generic form template
-    success_url = reverse_lazy("article_create")
+    extra_context = {
+        "title": "Create Category",
+        "btn_text": "Save Category",
+    }
+
+    def get_success_url(self):
+        next_url = self.request.POST.get("next") or self.request.GET.get("next")
+        if next_url:
+            return next_url
+        return reverse_lazy("article_create")
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         messages.success(self.request, f"Category '{form.instance.name}' created!")
@@ -229,9 +266,18 @@ class TagCreateView(LoginRequiredMixin, CreateView):
     """
 
     model = Tag
-    fields = ["name"]
+    form_class = TagForm
     template_name = "blog/article_form.html"  # Reusing the generic form template
-    success_url = reverse_lazy("article_create")
+    extra_context = {
+        "title": "Create Tag",
+        "btn_text": "Save Tag",
+    }
+
+    def get_success_url(self):
+        next_url = self.request.POST.get("next") or self.request.GET.get("next")
+        if next_url:
+            return next_url
+        return reverse_lazy("article_create")
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         messages.success(self.request, f"Tag '{form.instance.name}' created!")

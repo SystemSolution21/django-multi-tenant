@@ -4,6 +4,7 @@
 from typing import cast
 
 # Import django libraries
+from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models.manager import BaseManager
@@ -24,7 +25,7 @@ from rest_framework import viewsets
 import structlog
 
 # Import local modules
-from blog.models import Article
+from blog.models import Article, Category, Tag
 from blog.serializers import ArticleSerializer
 
 # Initialize logger
@@ -103,6 +104,15 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
     ]
     success_url = reverse_lazy("article_list")
 
+    def get_form(self, form_class=None):
+        """Customize the form widget for publish_date."""
+        form = super().get_form(form_class)
+        # Use HTML5 datetime-local input for a browser-native calendar picker
+        form.fields["publish_date"].widget = forms.DateTimeInput(
+            attrs={"type": "datetime-local"}
+        )
+        return form
+
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         """Add success message on article creation and log the event."""
 
@@ -138,6 +148,15 @@ class ArticleUpdateView(LoginRequiredMixin, UpdateView):
         "tags",
     ]
     success_url = reverse_lazy("article_list")
+
+    def get_form(self, form_class=None):
+        """Customize the form widget for publish_date."""
+        form = super().get_form(form_class)
+        # Use HTML5 datetime-local input for a browser-native calendar picker
+        form.fields["publish_date"].widget = forms.DateTimeInput(
+            attrs={"type": "datetime-local"}
+        )
+        return form
 
     def get_queryset(self) -> QuerySet[Article]:
         """Only allow authors to edit their own articles."""
@@ -187,3 +206,33 @@ class ArticleDeleteView(LoginRequiredMixin, DeleteView):
 
         # The parent's post() method calls the original delete().
         return super().post(request, *args, **kwargs)
+
+
+class CategoryCreateView(LoginRequiredMixin, CreateView):
+    """
+    Create a new category.
+    """
+
+    model = Category
+    fields = ["name", "description"]
+    template_name = "blog/article_form.html"  # Reusing the generic form template
+    success_url = reverse_lazy("article_create")
+
+    def form_valid(self, form: BaseModelForm) -> HttpResponse:
+        messages.success(self.request, f"Category '{form.instance.name}' created!")
+        return super().form_valid(form)
+
+
+class TagCreateView(LoginRequiredMixin, CreateView):
+    """
+    Create a new tag.
+    """
+
+    model = Tag
+    fields = ["name"]
+    template_name = "blog/article_form.html"  # Reusing the generic form template
+    success_url = reverse_lazy("article_create")
+
+    def form_valid(self, form: BaseModelForm) -> HttpResponse:
+        messages.success(self.request, f"Tag '{form.instance.name}' created!")
+        return super().form_valid(form)

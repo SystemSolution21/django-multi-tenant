@@ -71,8 +71,11 @@ class Article(TimeStampedModel):
         max_length=500, blank=True, help_text="Short summary of the article"
     )
     content = models.TextField()
-    featured_image = models.URLField(
-        blank=True, null=True, help_text="URL to featured image"
+    featured_image = models.ImageField(
+        upload_to="blog/images/",
+        blank=True,
+        null=True,
+        help_text="Upload a featured image",
     )
 
     # Author and publishing

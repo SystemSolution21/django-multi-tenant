@@ -7,6 +7,8 @@ URLs for the public schema.
 from typing import Any
 
 # Import django libraries
+from django.conf import settings
+from django.conf.urls.static import static as static_files
 from django.contrib import admin
 from django.urls import include, path
 from django.templatetags.static import static
@@ -43,3 +45,7 @@ urlpatterns: list[Any] = [
     ),  # Global search API
     path(route="hijack/", view=include("hijack.urls")),  # Hijack admin
 ]
+
+# Serve media files in development (DEBUG=True)
+if settings.DEBUG:
+    urlpatterns += static_files(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -6,7 +6,7 @@
     <div class="col-lg-8">
       <article>
         {% if article.featured_image %}
-          <img src="{{ article.featured_image }}" class="img-fluid rounded mb-4 w-100" alt="{{ article.title }}">
+        <img src="{{ article.featured_image.url }}" class="img-fluid rounded mb-4 w-10" alt="{{ article.title }}">
         {% endif %}
         <!-- article title -->
         <h1 class="fw-bold mb-3">{{ article.title }}</h1>
@@ -16,8 +16,8 @@
           <span class="mx-2">&bull;</span>
           <span>{{ article.author.full_name }}</span>
           {% if article.category %}
-            <span class="mx-2">&bull;</span>
-            <span class="badge bg-secondary">{{ article.category.name }}</span>
+          <span class="mx-2">&bull;</span>
+          <span class="badge bg-secondary">{{ article.category.name }}</span>
           {% endif %}
         </div>
         <!-- article content -->
@@ -26,18 +26,19 @@
         </div>
         <!-- article tags -->
         {% if article.tags.exists %}
-          <div class="mb-5">
-            {% for tag in article.tags.all %}
-              <span class="badge bg-light text-dark border me-1">#{{ tag.name }}</span>
-            {% endfor %}
-          </div>
+        <div class="mb-5">
+          {% for tag in article.tags.all %}
+          <span class="badge bg-light text-dark border me-1">#{{ tag.name }}</span>
+          {% endfor %}
+        </div>
         {% endif %}
       </article>
       <!-- article actions -->
       <hr>
       <a href="{% url 'article_list' %}" class="btn btn-outline-secondary">&larr; Back to Blog</a>
       {% if user == article.author %}
-        <a href="{% url 'article_update' article.pk %}" class="btn btn-primary ms-2">Edit Article</a>
+      <a href="{% url 'article_update' article.pk %}" class="btn btn-primary ms-2">Edit Article</a>
+      <a href="{% url 'article_delete' article.pk %}" class="btn btn-danger ms-2">Delete Article</a>
       {% endif %}
     </div>
   </div>

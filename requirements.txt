@@ -11,3 +11,4 @@ django-crispy-forms~=2.1
 crispy-bootstrap5~=2024.1
 django-hijack~=3.2.0
 whitenoise[brotli]~=6.7.0
+pillow~=12.1.1

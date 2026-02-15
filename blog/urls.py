@@ -16,6 +16,8 @@ from blog.views import (
     ArticleDetailView,
     ArticleListView,
     ArticleUpdateView,
+    CategoryCreateView,
+    TagCreateView,
 )
 
 # Blog URL patterns
@@ -31,4 +33,10 @@ urlpatterns: list[Any] = [
         view=ArticleDeleteView.as_view(),
         name="article_delete",
     ),
+    path(
+        route="categories/create/",
+        view=CategoryCreateView.as_view(),
+        name="category_create",
+    ),
+    path(route="tags/create/", view=TagCreateView.as_view(), name="tag_create"),
 ]

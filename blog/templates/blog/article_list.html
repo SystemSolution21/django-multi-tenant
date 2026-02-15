@@ -1,4 +1,3 @@
-
 <!-- blog/templates/blog/article_list.html -->
 {% extends "base.html" %}
 {% block content %}
@@ -14,8 +13,8 @@
   <div class="col-md-4 mb-4">
     <div class="card h-100 shadow-sm">
       {% if article.featured_image %}
-        <img src="{{ article.featured_image }}" class="card-img-top" alt="{{ article.title }}"
-          style="height: 200px; object-fit: cover;">
+        <img src="{{ article.featured_image.url }}" class="card-img-top" alt="{{ article.title }}"
+          style="height: 100px; object-fit: cover;">
       {% endif %}
       <div class="card-body">
         {% if article.category %}
@@ -29,6 +28,10 @@
       </div>
       <div class="card-footer bg-transparent border-top-0">
         <a href="{% url 'article_detail' article.pk %}" class="btn btn-outline-primary btn-sm">Read More</a>
+        {% if user == article.author %}
+          <a href="{% url 'article_update' article.pk %}" class="btn btn-outline-secondary btn-sm ms-1">Edit</a>
+          <a href="{% url 'article_delete' article.pk %}" class="btn btn-outline-danger btn-sm ms-1">Delete</a>
+        {% endif %}
       </div>
     </div>
   </div>

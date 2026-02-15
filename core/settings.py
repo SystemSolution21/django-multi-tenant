@@ -38,7 +38,7 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
 SECRET_KEY: str = os.getenv(key="SECRET_KEY", default="your-secret-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG: bool = os.getenv(key="DEBUG", default="True") == "True"
+DEBUG: bool = str(os.getenv(key="DEBUG", default="True")).lower() in ("true", "1", "t")
 
 # Set console log level from environment variable, defaulting to INFO
 CONSOLE_LOG_LEVEL: str = os.getenv(key="CONSOLE_LOG_LEVEL", default="INFO")

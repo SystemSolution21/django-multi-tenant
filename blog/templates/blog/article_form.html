@@ -19,6 +19,7 @@
             <input type="hidden" name="next" value="{{ request.GET.next }}">
           {% endif %}
           {% crispy form %}
+          <!-- form actions -->
           <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
             <a href="{% url 'article_list' %}" class="btn btn-light me-md-2">Cancel</a>
             <button type="submit" class="btn btn-success">{{ btn_text|default:"Save Article" }}</button>

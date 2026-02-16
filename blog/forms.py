@@ -36,7 +36,7 @@ class ArticleForm(forms.ModelForm):
             "slug",
             "excerpt",
             "content",
-            "featured_image",
+            # "featured_image",
             Row(
                 Div("status", css_class="col-md-6"),
                 Div("publish_date", css_class="col-md-6"),

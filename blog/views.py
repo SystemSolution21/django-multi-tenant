@@ -28,6 +28,7 @@ import structlog
 from blog.models import Article, Category, Tag
 from blog.forms import ArticleForm, CategoryForm, TagForm
 from blog.serializers import ArticleSerializer
+from tenants.models import User
 
 # Initialize logger
 logger = structlog.get_logger(__name__)
@@ -134,11 +135,13 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
         # Assign current user as author
         form.instance.author = self.request.user
         response = super().form_valid(form)
+        user = cast(User, self.request.user)
         messages.success(request=self.request, message="Article created successfully!")
         logger.info(
             "article_created",
             title=form.instance.title,
             article_id=form.instance.pk,
+            created_by=user.full_name,
             user_id=self.request.user.pk,
         )
         return response
@@ -193,12 +196,14 @@ class ArticleUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         """Add success message on article update and log the event."""
 
-        messages.success(self.request, "Article updated successfully!")
         response = super().form_valid(form)
+        user = cast(User, self.request.user)
+        messages.success(self.request, "Article updated successfully!")
         logger.info(
             "article_updated",
             title=form.instance.title,
             article_id=form.instance.pk,
+            updated_by=user.full_name,
             user_id=self.request.user.pk,
         )
         return response
@@ -223,11 +228,12 @@ class ArticleDeleteView(LoginRequiredMixin, DeleteView):
         """
         self.object = self.get_object()
         article = cast(Article, self.object)
-
+        user = cast(User, self.request.user)
         logger.info(
             "article_deleted",
             title=article.title,
             article_id=article.pk,
+            deleted_by=user.full_name,
             user_id=request.user.pk,
         )
         messages.success(request, "Article deleted successfully!")
@@ -256,8 +262,17 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("article_create")
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
+        user = cast(User, self.request.user)
+        response = super().form_valid(form)
         messages.success(self.request, f"Category '{form.instance.name}' created!")
-        return super().form_valid(form)
+        logger.info(
+            "category_created",
+            category_name=form.instance.name,
+            category_id=form.instance.pk,
+            created_by=user.full_name,
+            user_id=self.request.user.pk,
+        )
+        return response
 
 
 class TagCreateView(LoginRequiredMixin, CreateView):
@@ -280,5 +295,14 @@ class TagCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("article_create")
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
+        response = super().form_valid(form)
+        user = cast(User, self.request.user)
         messages.success(self.request, f"Tag '{form.instance.name}' created!")
-        return super().form_valid(form)
+        logger.info(
+            "tag_created",
+            tag_name=form.instance.name,
+            tag_id=form.instance.pk,
+            created_by=user.full_name,
+            user_id=self.request.user.pk,
+        )
+        return response

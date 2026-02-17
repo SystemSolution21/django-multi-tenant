@@ -12,11 +12,6 @@
   {% for article in articles %}
     <div class="col-md-4 mb-4">
       <div class="card h-100 shadow-sm">
-        {% if article.featured_image %}
-          <img src="{{ article.featured_image.url }}" class="card-img-top" alt="{{ article.title }}"
-            style="width: 100%; height: 100px; object-fit: contain; object-position: left;" 
-            hidden="hidden">
-        {% endif %}
         <div class="card-body">
           {% if article.category %}
             <span class="badge bg-info text-dark mb-2">{{ article.category.name }}</span>

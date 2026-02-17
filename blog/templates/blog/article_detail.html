@@ -5,11 +5,6 @@
   <div class="row justify-content-center">
     <div class="col-lg-8">
       <article>
-        {% if article.featured_image %}
-          <img src="{{ article.featured_image.url }}" class="img-fluid rounded mb-4" 
-            style="width: 100%; height: 100px; object-fit: contain; object-position: left;" 
-            alt="{{ article.title }}" hidden="hidden">
-        {% endif %}
         <!-- article title -->
         <h1 class="fw-bold mb-3">{{ article.title }}</h1>
         <!-- article metadata -->

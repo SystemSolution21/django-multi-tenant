@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -15,54 +14,130 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('slug', models.SlugField(blank=True, max_length=100, unique=True)),
-                ('description', models.TextField(blank=True, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("name", models.CharField(max_length=100, unique=True)),
+                ("slug", models.SlugField(blank=True, max_length=100, unique=True)),
+                ("description", models.TextField(blank=True, null=True)),
             ],
             options={
-                'verbose_name_plural': 'Categories',
-                'ordering': ['name'],
+                "verbose_name_plural": "Categories",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Tag',
+            name="Tag",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=50, unique=True)),
-                ('slug', models.SlugField(blank=True, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("name", models.CharField(max_length=50, unique=True)),
+                ("slug", models.SlugField(blank=True, unique=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Article',
+            name="Article",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('title', models.CharField(max_length=255)),
-                ('slug', models.SlugField(blank=True, max_length=255, unique=True)),
-                ('excerpt', models.TextField(blank=True, help_text='Short summary of the article', max_length=500)),
-                ('content', models.TextField()),
-                ('featured_image', models.URLField(blank=True, help_text='URL to featured image', null=True)),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('published', 'Published'), ('archived', 'Archived')], default='draft', max_length=20)),
-                ('publish_date', models.DateTimeField(blank=True, help_text='Date and time when article should be published', null=True)),
-                ('views_count', models.PositiveIntegerField(default=0)),
-                ('author', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='articles', to=settings.AUTH_USER_MODEL)),
-                ('category', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='articles', to='blog.category')),
-                ('tags', models.ManyToManyField(blank=True, related_name='articles', to='blog.tag')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("title", models.CharField(max_length=255)),
+                ("slug", models.SlugField(blank=True, max_length=255, unique=True)),
+                (
+                    "excerpt",
+                    models.TextField(
+                        blank=True,
+                        help_text="Short summary of the article",
+                        max_length=500,
+                    ),
+                ),
+                ("content", models.TextField()),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("draft", "Draft"),
+                            ("published", "Published"),
+                            ("archived", "Archived"),
+                        ],
+                        default="draft",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "publish_date",
+                    models.DateTimeField(
+                        blank=True,
+                        help_text="Date and time when article should be published",
+                        null=True,
+                    ),
+                ),
+                ("views_count", models.PositiveIntegerField(default=0)),
+                (
+                    "author",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="articles",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "category",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="articles",
+                        to="blog.category",
+                    ),
+                ),
+                (
+                    "tags",
+                    models.ManyToManyField(
+                        blank=True, related_name="articles", to="blog.tag"
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-publish_date', '-created_at'],
-                'indexes': [models.Index(fields=['status'], name='article_status_idx'), models.Index(fields=['author'], name='article_author_idx'), models.Index(fields=['publish_date'], name='article_publish_date_idx')],
+                "ordering": ["-publish_date", "-created_at"],
+                "indexes": [
+                    models.Index(fields=["status"], name="article_status_idx"),
+                    models.Index(fields=["author"], name="article_author_idx"),
+                    models.Index(
+                        fields=["publish_date"], name="article_publish_date_idx"
+                    ),
+                ],
             },
         ),
     ]

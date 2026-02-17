@@ -28,6 +28,7 @@ import structlog
 from tasks.models import Project, Task
 from tasks.serializers import ProjectSerializer, TaskSerializer
 from tenants.mixins import TenantSchemaRequiredMixin
+from tenants.models import User
 
 # Initialize logger
 logger = structlog.get_logger(__name__)
@@ -122,7 +123,8 @@ class ProjectCreateView(LoginRequiredMixin, TenantSchemaRequiredMixin, CreateVie
             "Project created",
             project=form.instance.name,
             project_id=form.instance.pk,
-            user_id=self.request.user.pk,
+            owner_name=cast(User, form.instance.owner).full_name,
+            owner_id=self.request.user.pk,
         )
         return response
 
@@ -152,7 +154,8 @@ class ProjectUpdateView(LoginRequiredMixin, TenantSchemaRequiredMixin, UpdateVie
             "Project updated",
             project=form.instance.name,
             project_id=form.instance.pk,
-            user_id=self.request.user.pk,
+            owner_name=cast(User, form.instance.owner).full_name,
+            owner_id=self.request.user.pk,
         )
         return response
 
@@ -175,7 +178,8 @@ class ProjectDeleteView(LoginRequiredMixin, TenantSchemaRequiredMixin, DeleteVie
             "Project deleted",
             project=project.name,
             project_id=project.pk,
-            user_id=request.user.pk,
+            owner_name=cast(User, self.request.user).full_name,
+            owner_id=self.request.user.pk,
         )
         # The parent's post() method calls the original delete().
         return super().post(request, *args, **kwargs)

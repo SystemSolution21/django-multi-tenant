@@ -287,15 +287,17 @@ MEDIA_URL = "/media/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Email configuration for password reset
-# EMAIL_BACKEND: str | None = os.environ.get("EMAIL_BACKEND")
-# EMAIL_HOST: str | None = os.environ.get("EMAIL_HOST")
-# EMAIL_PORT: str | None = os.environ.get("EMAIL_PORT")
-# EMAIL_USE_TLS: str | None = os.environ.get("EMAIL_USE_TLS")
-# EMAIL_HOST_USER: str | None = os.environ.get("EMAIL_USER")
-# EMAIL_HOST_PASSWORD: str | None = os.environ.get("EMAIL_PASS")
-# DEFAULT_FROM_EMAIL: str | None = os.environ.get("EMAIL_USER")
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = str(os.getenv("EMAIL_USE_TLS", "True")).lower() in ("true", "1", "t")
+EMAIL_HOST_USER = os.getenv("EMAIL_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASS")
+DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # for development
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # for development
 
 # Redirects after login and logout
 LOGIN_REDIRECT_URL = "index"

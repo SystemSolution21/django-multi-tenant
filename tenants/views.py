@@ -4,6 +4,7 @@
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 # Import django libraries
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import ValidationError
@@ -320,6 +321,9 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         user: User = cast(User, self.request.user)
         current_tenant: Tenant = Tenant.objects.get(schema_name=connection.schema_name)
 
+        # Normalize email to lowercase to ensure consistent comparisons
+        form.instance.email = form.instance.email.lower()
+
         form.instance.tenant = current_tenant
         form.instance.invited_by = user
 
@@ -389,7 +393,8 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
                 if port not in ["80", "443"]
                 else tenant_domain.domain
             )
-            invitation_url: str = f"http://{domain_with_port}/tenants/invitations/{self.object.token}/accept/"
+            protocol = self.request.scheme
+            invitation_url: str = f"{protocol}://{domain_with_port}/tenants/invitations/{self.object.token}/accept/"
         else:
             # Fallback to current domain if public domain not found
             invitation_url = self.request.build_absolute_uri(
@@ -401,7 +406,7 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         send_mail(
             subject=f"Invitation to join {current_tenant.name}",
             message=f"You have been invited to join {current_tenant.name}. Click here to accept: {invitation_url}",
-            from_email="noreply@yourapp.com",
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.object.email],
             fail_silently=False,
         )
@@ -440,7 +445,10 @@ class AcceptInvitationView(View):
             return redirect("index")
 
         # UX Improvement: Warn immediately if logged in as the wrong user
-        if request.user.is_authenticated and request.user.email != invitation.email:
+        if (
+            request.user.is_authenticated
+            and request.user.email.lower() != invitation.email.lower()
+        ):
             messages.warning(
                 request,
                 f"You are logged in as {request.user.email}. This invitation is for {invitation.email}. Please log out and log in as the correct user.",
@@ -485,7 +493,7 @@ class AcceptInvitationView(View):
                 )
                 return redirect("index")
 
-            if request.user.email != invitation.email:
+            if request.user.email.lower() != invitation.email.lower():
                 messages.error(
                     request,
                     f"You are logged in as {request.user.email}. This invitation is for {invitation.email}. Please log out and try again.",
@@ -535,10 +543,11 @@ class AcceptInvitationView(View):
                 if port not in ["80", "443"]
                 else tenant_domain.domain
             )
+            protocol = request.scheme
 
             if invitation.role == "admin":
-                return redirect(f"http://{domain_with_port}/tenants/users/")
-            return redirect(f"http://{domain_with_port}/")
+                return redirect(f"{protocol}://{domain_with_port}/tenants/users/")
+            return redirect(f"{protocol}://{domain_with_port}/")
 
         return redirect("index")
 

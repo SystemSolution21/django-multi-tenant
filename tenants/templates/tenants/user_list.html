@@ -120,7 +120,14 @@
                     {% endif %}
                   </td>
                   <td>
-                    <a href="#" class="btn btn-sm btn-outline-secondary disabled">Edit</a>
+                    <form action="{% url 'invitation_resend' invitation.pk %}" method="post" class="d-inline me-2">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-primary">Resend</button>
+                    </form>
+                    <form action="{% url 'invitation_delete' invitation.pk %}" method="post" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-danger">Cancel</button>
+                    </form>
                   </td>
                 </tr>
               {% endfor %}

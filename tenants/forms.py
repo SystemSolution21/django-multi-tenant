@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
 # Import local modules
-from tenants.models import Tenant
+from tenants.models import Tenant, UserInvitation
 
 
 class TenantForm(forms.ModelForm):
@@ -46,3 +46,19 @@ class TenantForm(forms.ModelForm):
             )
 
         return schema_name
+
+
+class UserInvitationForm(forms.ModelForm):
+    """
+    Form for inviting users to a tenant.
+    """
+
+    class Meta:
+        model = UserInvitation
+        fields = ["email", "role"]
+        widgets = {
+            "email": forms.EmailInput(attrs={"placeholder": "colleague@example.com"}),
+        }
+        help_texts = {
+            "email": "Enter the email address of the person you want to invite. If they are not yet a registered user, they will be invited to sign up.",
+        }

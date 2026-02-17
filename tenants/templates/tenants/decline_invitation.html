@@ -1,27 +1,22 @@
-<!-- tenants/templates/tenants/decline_invitation.html -->
 {% extends "base.html" %}
-{% block title %}Decline Invitation{% endblock %}
+
+{% block title %}Decline Invitation - {{ block.super }}{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6">
-      <div class="card shadow">
-        <div class="card-body text-center">
-          <h2 class="mb-4">Decline Invitation</h2>
-          <p>
-            Are you sure you want to decline the invitation to join
-            <strong>{{ invitation.tenant.name }}</strong>?
-          </p>
-          <form method="post">
-            {% csrf_token %}
-            <div class="d-grid gap-2 d-md-block">
-              <button type="submit" class="btn btn-danger">
-                Decline Invitation
-              </button>
-              <a href="{% url 'index' %}" class="btn btn-secondary">Cancel</a>
-            </div>
-          </form>
-        </div>
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body text-center p-4">
+        <h2 class="card-title mb-3 text-danger">Decline Invitation?</h2>
+        <p class="lead">Are you sure you want to decline the invitation to join
+          <strong>{{ invitation.tenant.name }}</strong>?</p>
+        <p class="text-muted">This action cannot be undone. You will need a new invitation to join later.</p>
+
+        <form method="post" class="mt-4">
+          {% csrf_token %}
+          <a href="{% url 'index' %}" class="btn btn-light me-2">Cancel</a>
+          <button type="submit" class="btn btn-danger">Decline Invitation</button>
+        </form>
       </div>
     </div>
   </div>

@@ -1,5 +1,8 @@
 # accounts/forms.py
 
+# Import standard libraries
+from typing import Any
+
 # Import django libraries
 from django.conf import settings
 from django.contrib.auth.forms import UserCreationForm
@@ -28,6 +31,11 @@ class CustomUserCreationForm(UserCreationForm):
         model = User
         fields = ("email", "first_name", "last_name")
         field_classes = {"email": UserCreationForm.Meta.field_classes["username"]}  # type: ignore
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        if self.initial.get("invitation_code"):
+            self.fields["invitation_code"].widget = forms.HiddenInput()
 
     def clean(self):
         cleaned_data = super().clean()

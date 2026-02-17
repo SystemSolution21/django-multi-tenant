@@ -9,6 +9,9 @@ from django.urls import path
 # Import local modules
 from tenants.views import (
     AcceptInvitationView,
+    DeclineInvitationView,
+    ResendInvitationView,
+    DeleteInvitationView,
     TenantCreateView,
     TenantDeleteView,
     TenantDetailView,
@@ -35,6 +38,16 @@ urlpatterns: list[Any] = [
     ),
     path(route="users/", view=TenantUserListView.as_view(), name="user_list"),
     path(route="users/invite/", view=UserInviteView.as_view(), name="user_invite"),
+    path(
+        route="users/invitations/<uuid:pk>/resend/",
+        view=ResendInvitationView.as_view(),
+        name="invitation_resend",
+    ),
+    path(
+        route="users/invitations/<uuid:pk>/delete/",
+        view=DeleteInvitationView.as_view(),
+        name="invitation_delete",
+    ),
     path(route="users/<int:pk>/edit/", view=UserEditView.as_view(), name="user_edit"),
     path(
         route="users/<int:pk>/remove/",
@@ -55,6 +68,11 @@ urlpatterns: list[Any] = [
         route="invitations/<uuid:token>/accept/",
         view=AcceptInvitationView.as_view(),
         name="accept_invitation",
+    ),
+    path(
+        route="invitations/<uuid:token>/decline/",
+        view=DeclineInvitationView.as_view(),
+        name="decline_invitation",
     ),
     path(
         route="search/",

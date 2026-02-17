@@ -45,6 +45,13 @@ class SignUpView(CreateView):
                 return redirect(f"{public_url}{reverse_lazy('signup')}")
         return super().dispatch(request, *args, **kwargs)
 
+    def get_initial(self) -> dict[str, Any]:
+        initial = super().get_initial()
+        invitation_code = self.request.GET.get("invitation_code")
+        if invitation_code:
+            initial["invitation_code"] = invitation_code
+        return initial
+
     def form_valid(self, form) -> HttpResponse:
         with transaction.atomic():
             response: HttpResponse = super().form_valid(form=form)

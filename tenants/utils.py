@@ -3,6 +3,8 @@
 # Import standard libraries
 from typing import Any, cast
 from django.core.exceptions import ValidationError
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db import connection, models, ProgrammingError
 from django.db.models.fields.reverse_related import ManyToOneRel
 
@@ -10,6 +12,7 @@ from django.db.models.fields.reverse_related import ManyToOneRel
 from django.contrib.auth.models import UserManager
 from django.db import transaction
 from django.http import HttpRequest
+from django.urls import reverse
 from django_tenants.utils import schema_context
 
 # Import third-party libraries
@@ -17,7 +20,7 @@ from tenant_users.tenants.tasks import provision_tenant
 from tenant_users.permissions.models import UserTenantPermissions
 
 # Import local modules
-from tenants.models import Domain, Tenant, User
+from tenants.models import Domain, Tenant, User, UserInvitation
 from tasks.models import Project, Task
 
 
@@ -221,3 +224,40 @@ def delete_user_globally(user: User) -> None:
         project_owner_rel.on_delete = original_project_on_delete
         task_assignee_rel.on_delete = original_task_on_delete
         utp_profile_rel.on_delete = original_utp_on_delete
+
+
+def send_invitation_email(request: HttpRequest, invitation: UserInvitation) -> None:
+    """
+    Sends the invitation email to the user.
+    """
+    # Use current tenant domain for invitation URL
+    with schema_context("public"):
+        tenant_domain: Domain | None = Domain.objects.filter(
+            tenant=invitation.tenant, is_primary=True
+        ).first()
+
+    if tenant_domain:
+        # Get the port from the current request
+        port: str = request.get_port()
+        domain_with_port: str = (
+            f"{tenant_domain.domain}:{port}"
+            if port not in ["80", "443"]
+            else tenant_domain.domain
+        )
+        protocol = request.scheme
+        invitation_url: str = f"{protocol}://{domain_with_port}/tenants/invitations/{invitation.token}/accept/"
+    else:
+        # Fallback to current domain if public domain not found
+        invitation_url = request.build_absolute_uri(
+            location=reverse(
+                viewname="accept_invitation", kwargs={"token": invitation.token}
+            )
+        )
+
+    send_mail(
+        subject=f"Invitation to join {invitation.tenant.name}",
+        message=f"You have been invited to join {invitation.tenant.name}. Click here to accept: {invitation_url}",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[invitation.email],
+        fail_silently=False,
+    )

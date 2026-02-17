@@ -1,34 +1,47 @@
 <!-- tenants/templates/tenants/accept_invitation.html -->
-{% extends "base.html" %} 
-{% block title %}Accept Invitation{% endblock %} 
+{% extends "base.html" %}
+
+{% block title %}Accept Invitation - {{ block.super }}{% endblock %}
+
 {% block content %}
-<div class="container">
-  <div class="row justify-content-center">
+<div class="row justify-content-center">
     <div class="col-md-6">
-      <div class="card">
-        <div class="card-header">
-          <h4>Join {{ invitation.tenant.name }}</h4>
+        <div class="card shadow-sm">
+            <div class="card-body text-center p-4">
+                <h2 class="card-title mb-3">Join {{ invitation.tenant.name }}</h2>
+                <p class="lead">You have been invited by <strong>{{ invitation.invited_by.full_name }}</strong> to join
+                    the '{{ invitation.tenant.name }}' workspace as a {{ invitation.get_role_display }}.</p>
+
+                {% if is_wrong_user %}
+                <div class="alert alert-warning">
+                    You are currently logged in as <strong>{{ user.email }}</strong>, but this invitation is for
+                    <strong>{{ invitation.email }}</strong>.
+                </div>
+                <p>Please log out to accept this invitation.</p>
+                <form method="post" action="{% url 'logout' %}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Log Out</button>
+                </form>
+                {% elif user_exists %}
+                <p>Click the button below to accept the invitation.</p>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg">Accept Invitation</button>
+                </form>
+                {% else %}
+                <p>You'll need to create an account first. Click the button below to sign up and automatically accept
+                    the invitation.</p>
+                <a href="{% url 'signup' %}?invitation_code={{ invitation.token }}" class="btn btn-primary btn-lg">Sign
+                    Up & Accept</a>
+                {% endif %}
+
+                <div class="mt-4">
+                    <a href="{% url 'decline_invitation' token=invitation.token %}" class="text-danger small">Decline
+                        this invitation</a>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-          <p>You've been invited to join
-            <strong>{{ invitation.tenant.name }}</strong> as a
-            <strong>{{ invitation.get_role_display }}</strong>.
-          </p>
-          {% if user.is_authenticated %}
-          <p>Click below to accept the invitation:</p>
-          <form method="post">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary">
-              Accept Invitation
-            </button>
-          </form>
-          {% else %}
-          <p>Please log in to accept this invitation.</p>
-          <a href="/admin/login/?next={{ request.get_full_path }}" class="btn btn-primary">Login</a>
-          {% endif %}
-        </div>
-      </div>
     </div>
-  </div>
 </div>
 {% endblock %}

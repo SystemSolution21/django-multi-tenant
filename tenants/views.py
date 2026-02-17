@@ -2,14 +2,14 @@
 
 # Import standard libraries
 from typing import TYPE_CHECKING, Any, Literal, cast
+from datetime import timedelta
 
 # Import django libraries
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
 from django.db import connection
+from django.utils import timezone
 from django.db.models import Q
 from django.db.models.manager import BaseManager
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
@@ -32,10 +32,10 @@ import structlog
 
 # Import local modules
 from tenants.mixins import TenantAdminRequiredMixin
-from tenants.forms import TenantForm
+from tenants.forms import TenantForm, UserInvitationForm
 from tenants.models import Domain, Tenant, User, UserInvitation
 from tenants.serializers import TenantSerializer
-from tenants.utils import create_tenant, delete_user_globally
+from tenants.utils import create_tenant, delete_user_globally, send_invitation_email
 from blog.models import Article
 from tasks.models import Project, Task
 
@@ -300,7 +300,7 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         object: UserInvitation
 
     model = UserInvitation
-    fields: list[str] = ["email", "role"]
+    form_class = UserInvitationForm
     template_name = "tenants/user_invite.html"
     success_url: Any = reverse_lazy("user_list")
 
@@ -379,44 +379,14 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
 
         response: HttpResponse = super().form_valid(form=form)
 
-        # Use current tenant domain for invitation URL
-        with schema_context("public"):
-            tenant_domain: Domain | None = Domain.objects.filter(
-                tenant=current_tenant, is_primary=True
-            ).first()
-
-        if tenant_domain:
-            # Get the port from the current request
-            port: str = self.request.get_port()
-            domain_with_port: str = (
-                f"{tenant_domain.domain}:{port}"
-                if port not in ["80", "443"]
-                else tenant_domain.domain
-            )
-            protocol = self.request.scheme
-            invitation_url: str = f"{protocol}://{domain_with_port}/tenants/invitations/{self.object.token}/accept/"
-        else:
-            # Fallback to current domain if public domain not found
-            invitation_url = self.request.build_absolute_uri(
-                location=reverse(
-                    viewname="accept_invitation", kwargs={"token": self.object.token}
-                )
-            )
-
-        send_mail(
-            subject=f"Invitation to join {current_tenant.name}",
-            message=f"You have been invited to join {current_tenant.name}. Click here to accept: {invitation_url}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[self.object.email],
-            fail_silently=False,
-        )
+        send_invitation_email(request=self.request, invitation=self.object)
 
         messages.success(
             request=self.request, message=f"Invitation sent to {self.object.email}"
         )
         logger.info(
             event="invitation_sent",
-            invitation_id=self.object.pk.hex,
+            invitation_id=self.object.pk,
             user_email=self.object.email,
             invited_by_tenant=user.full_name,
             tenant_user_id=user.pk,
@@ -433,6 +403,8 @@ class AcceptInvitationView(View):
             invitation = get_object_or_404(
                 UserInvitation, token=token, is_accepted=False
             )
+            # Check if a user with this email already exists
+            user_exists = User.objects.filter(email=invitation.email).exists()
 
         if invitation.is_expired:
             messages.error(request, "This invitation has expired.")
@@ -445,10 +417,12 @@ class AcceptInvitationView(View):
             return redirect("index")
 
         # UX Improvement: Warn immediately if logged in as the wrong user
+        is_wrong_user = False
         if (
             request.user.is_authenticated
             and request.user.email.lower() != invitation.email.lower()
         ):
+            is_wrong_user = True
             messages.warning(
                 request,
                 f"You are logged in as {request.user.email}. This invitation is for {invitation.email}. Please log out and log in as the correct user.",
@@ -465,23 +439,25 @@ class AcceptInvitationView(View):
             "tenants/accept_invitation.html",
             {
                 "invitation": invitation,
+                "user_exists": user_exists,
+                "is_wrong_user": is_wrong_user,
             },
         )
 
     def post(self, request, token):
-        if not request.user.is_authenticated:
-            messages.error(request, "Please log in to accept the invitation.")
-            logger.error(
-                event="invitation_accept_not_logged_in",
-                invited_user_email=request.user.email,
-            )
-            return redirect(f"{reverse('login')}?next={request.path}")
-
         # Perform all operations in public schema context
         with schema_context("public"):
             invitation: UserInvitation = get_object_or_404(
                 UserInvitation, token=token, is_accepted=False
             )
+
+            if not request.user.is_authenticated:
+                messages.error(request, "Please log in to accept the invitation.")
+                logger.error(
+                    event="invitation_accept_not_logged_in",
+                    invited_user_email=invitation.email,
+                )
+                return redirect(f"{reverse('login')}?next={request.path}")
 
             if invitation.is_expired:
                 messages.error(request, "This invitation has expired.")
@@ -578,7 +554,63 @@ class DeclineInvitationView(View):
             invitation.delete()
 
         messages.success(request=request, message="Invitation declined successfully.")
+        logger.info(
+            event="invitation_declined",
+            user_email=invitation.email,
+            invited_by_tenant=invitation.invited_by.full_name,
+            tenant_user_id=invitation.invited_by.pk,
+        )
         return redirect(to="index")
+
+
+class ResendInvitationView(TenantAdminRequiredMixin, View):
+    """Resend an existing invitation"""
+
+    def post(self, request, pk):
+        current_schema = connection.schema_name
+        with schema_context("public"):
+            invitation = get_object_or_404(
+                UserInvitation, pk=pk, tenant__schema_name=current_schema
+            )
+
+            # Refresh expiration
+            invitation.expires_at = timezone.now() + timedelta(days=7)
+            invitation.save()
+
+            # Send email
+            send_invitation_email(request, invitation)
+
+        messages.success(request, f"Invitation resent to {invitation.email}")
+        logger.info(
+            event="invitation_resent",
+            invitation_id=invitation.pk,
+            user_email=invitation.email,
+            resent_by=request.user.email,
+        )
+        return redirect("user_list")
+
+
+class DeleteInvitationView(TenantAdminRequiredMixin, View):
+    """Cancel/Delete a pending invitation"""
+
+    def post(self, request, pk):
+        current_schema = connection.schema_name
+        with schema_context("public"):
+            invitation = get_object_or_404(
+                UserInvitation, pk=pk, tenant__schema_name=current_schema
+            )
+            email = invitation.email
+            invitation_id = invitation.pk
+            invitation.delete()
+
+        messages.success(request, f"Invitation for {email} has been cancelled.")
+        logger.info(
+            event="invitation_cancelled",
+            invitation_id=invitation_id,
+            user_email=email,
+            cancelled_by=request.user.email,
+        )
+        return redirect("user_list")
 
 
 class UserEditView(TenantAdminRequiredMixin, UpdateView):

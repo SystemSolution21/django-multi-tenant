@@ -11,6 +11,7 @@ dependencies = [
     "django-filter==25.1",
     "django-hijack>=3.7.6",
     "django-structlog>=10.0.0",
+    "gunicorn>=23.0.0",
     "django-tenant-users==2.1.1",
     "django-tenants==3.7.0",
     "djangorestframework==3.16.0",

@@ -12,23 +12,12 @@
   },
   {
     "id": 2,
-    "name": "Demo1 Tenant",
-    "schema_name": "demo1",
-    "subdomain": "demo1",
+    "name": "Demo Tenant",
+    "schema_name": "demo",
+    "subdomain": "demo",
     "owner": {
-      "username": "admin@demo1.lvh.me",
-      "email": "admin@demo1.lvh.me",
-      "password": "password"
-    }
-  },
-  {
-    "id": 3,
-    "name": "Demo2 Tenant",
-    "schema_name": "demo2",
-    "subdomain": "demo2",
-    "owner": {
-      "username": "admin@demo2.lvh.me",
-      "email": "admin@demo2.lvh.me",
+      "username": "admin@demo.lvh.me",
+      "email": "admin@demo.lvh.me",
       "password": "password"
     }
   }

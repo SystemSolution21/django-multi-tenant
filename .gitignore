@@ -25,9 +25,5 @@ staticfiles
 # Mac
 .DS_Store
 
-# Logs
-logs/*
-!logs/app.log
-
 # ToDo
 ToDo.md

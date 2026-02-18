@@ -386,7 +386,7 @@ class UserInviteView(TenantAdminRequiredMixin, CreateView):
         )
         logger.info(
             event="invitation_sent",
-            invitation_id=self.object.pk,
+            invitation_id=str(self.object.pk),
             user_email=self.object.email,
             invited_by_tenant=user.full_name,
             tenant_user_id=user.pk,
@@ -583,7 +583,7 @@ class ResendInvitationView(TenantAdminRequiredMixin, View):
         messages.success(request, f"Invitation resent to {invitation.email}")
         logger.info(
             event="invitation_resent",
-            invitation_id=invitation.pk,
+            invitation_id=str(invitation.pk),
             user_email=invitation.email,
             resent_by=request.user.email,
         )
@@ -606,7 +606,7 @@ class DeleteInvitationView(TenantAdminRequiredMixin, View):
         messages.success(request, f"Invitation for {email} has been cancelled.")
         logger.info(
             event="invitation_cancelled",
-            invitation_id=invitation_id,
+            invitation_id=str(invitation_id),
             user_email=email,
             cancelled_by=request.user.email,
         )

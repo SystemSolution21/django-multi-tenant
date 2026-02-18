@@ -1,0 +1,16 @@
+# Docker ignore file
+# Python cache files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+# Virtual Environments
+env/
+.venv/
+# IDEs
+.vscode/
+# Version control
+.git/
+# Mac
+.DS_Store

@@ -5,8 +5,11 @@ set -e
 python manage.py migrate_schemas --noinput
 python manage.py init_public_tenant
 
-# Collect static files
-python manage.py collectstatic --noinput --clear
+# Collect static files only in production
+if [ "$DJANGO_ENV" = "production" ]; then
+    echo "=== Collecting static files for production ==="
+    python manage.py collectstatic --noinput --clear
+fi
 
 # Execute the main command (e.g., gunicorn or runserver)
 exec "$@"

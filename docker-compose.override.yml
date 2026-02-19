@@ -1,10 +1,10 @@
 services:
   web:
+    # Set the environment to development
+    environment:
+      - DJANGO_ENV=development
     # Command to run the development server
     command: python manage.py runserver 0.0.0.0:8000
     # Mount local code for live reloading
     volumes:
       - .:/app
-    # Expose port for local access
-    ports:
-      - "8000:8000"

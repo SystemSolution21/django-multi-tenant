@@ -98,7 +98,7 @@
         </div>
       </div>
       <!-- tenant settings -->
-      {% if user.is_staff %}
+      {% if user.is_staff and not user.is_global_superuser %}
         <div class="mt-4">
           <h3>Tenant Administration Site</h3>
           <a href="/admin/" class="btn btn-secondary">Tenant Administration</a>

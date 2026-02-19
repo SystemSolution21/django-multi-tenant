@@ -35,6 +35,8 @@ def create_tenant(tenant_data: dict[str, Any]):
             - subdomain: Subdomain for routing
             - email: Owner's email
             - password: Owner's password (if creating new user)
+            - first_name: Owner's first name
+            - last_name: Owner's last name
             - root_user: Optional existing user to add as admin
 
     Returns:
@@ -49,6 +51,8 @@ def create_tenant(tenant_data: dict[str, Any]):
                 username=tenant_data["email"],
                 email=tenant_data["email"],
                 password=tenant_data["password"],
+                first_name=tenant_data.get("first_name", ""),
+                last_name=tenant_data.get("last_name", ""),
             )
             tenant_owner.is_verified = True
             tenant_owner.save()

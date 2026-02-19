@@ -80,7 +80,20 @@ class TenantCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     success_url: Any = reverse_lazy("tenant_list")
 
     def test_func(self) -> bool:
-        return self.request.user.is_superuser
+        # This view is intended for users to create their own tenants.
+        # Superusers should use the more powerful admin 'provision' view.
+        # We allow them here but will redirect in dispatch.
+        return self.request.user.is_authenticated
+
+    def dispatch(self, request, *args, **kwargs):
+        # Redirect superusers to the admin provisioning interface
+        if request.user.is_superuser:
+            messages.info(
+                request,
+                "As a superuser, please use the 'Provision Tenant' interface for more options.",
+            )
+            return redirect(reverse("admin:tenants_tenant_provision"))
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form) -> HttpResponseRedirect:
         user = self.request.user

@@ -360,8 +360,22 @@ class ProvisionTenantForm(forms.Form):
             )
         ],
     )
+    first_name = forms.CharField(label="Owner First Name", max_length=30)
+    last_name = forms.CharField(label="Owner Last Name", max_length=30)
     email = forms.EmailField(label="Owner Email")
     password = forms.CharField(widget=forms.PasswordInput, label="Owner Password")
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput, label="Confirm Password"
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        confirm_password = cleaned_data.get("confirm_password")
+
+        if password and confirm_password and password != confirm_password:
+            raise forms.ValidationError("Passwords do not match.")
+        return cleaned_data
 
     def clean_subdomain(self):
         subdomain = self.cleaned_data["subdomain"].lower()
@@ -452,10 +466,15 @@ class TenantAdmin(TenantAdminMixin, admin.ModelAdmin):
                         "subdomain": form.cleaned_data["subdomain"],
                         "email": form.cleaned_data["email"],
                         "password": form.cleaned_data["password"],
+                        "first_name": form.cleaned_data["first_name"],
+                        "last_name": form.cleaned_data["last_name"],
                     }
-                    create_tenant(tenant_data)
+                    tenant, domain = create_tenant(tenant_data)
+
                     self.message_user(
-                        request, "Tenant provisioned successfully.", messages.SUCCESS
+                        request,
+                        f"Tenant '{tenant.name}' provisioned successfully.",
+                        messages.SUCCESS,
                     )
                     return HttpResponseRedirect(
                         reverse("admin:tenants_tenant_changelist")

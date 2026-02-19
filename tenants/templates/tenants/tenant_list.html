@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Tenants Management</h2>
-<a href="{% url 'tenant_create' %}" class="btn btn-primary mb-3">Create Tenant</a>
+<a href="{% url 'admin:tenants_tenant_provision' %}" class="btn btn-primary mb-3">Provision New Tenant</a>
 <table class="table table-bordered table-hover">
   <thead>
     <tr class="bg-light text-dark text-center">

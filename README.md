@@ -60,7 +60,7 @@ See `database.txt` for the specific SQL commands to configure the database user 
 ## Schema Context
 
 - The `public` schema is the global (shared) namespace
-- Each tenant has its own PostgreSQL schema (e.g., `demo1`, `demo2`)
+- Each tenant has its own PostgreSQL schema (e.g., `demo`)
 - The `connection.schema_name` variable indicates the current schema context
 
 ## Global Admin Workflow

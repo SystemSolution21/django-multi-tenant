@@ -1,16 +1,16 @@
-# The `admin@demo1.lvh.me` should have **tenant-scoped admin privileges** - full control within their tenant but no access to other tenants or global system management
+# The `admin@demo.lvh.me` should have **tenant-scoped admin privileges** - full control within their tenant but no access to other tenants or global system management
 
-## Recommended Privileges for `admin@demo1.lvh.me`
+## Privileges for `admin@demo.lvh.me`
 
 ### ✅ **SHOULD HAVE ACCESS TO:**
 
-**Within Demo1 Tenant Schema:**
+**Within Demo Tenant Schema:**
 
-- **User Management**: Invite/edit/delete users within demo1 tenant (but not other tenants)
-- **Tasks App**: Full CRUD on projects and tasks in demo1 schema
-- **Django Admin**: Access to `/admin/` for demo1-specific models
-- **API Endpoints**: Full access to `/api/tasks/`, `/api/projects/` in demo1 context
-- **Tenant Settings**: Modify demo1 tenant name, preferences (but not schema_name) (but not other tenants)
+- **User Management**: Invite/edit/delete users within demo tenant (but not other tenants)
+- **Tasks App**: Full CRUD on projects and tasks in demo schema
+- **Django Admin**: Access to `/admin/` for demo-specific models
+- **API Endpoints**: Full access to `/api/tasks/`, `/api/projects/` in demo context
+- **Tenant Settings**: Modify demo tenant name, preferences (but not schema_name) (but not other tenants)
 
 ### ❌ **SHOULD NOT HAVE ACCESS TO:**
 

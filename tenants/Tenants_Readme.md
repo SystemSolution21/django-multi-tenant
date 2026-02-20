@@ -28,10 +28,10 @@ Tenant definitions are stored in `tenants/data/tenants.json`.
         "owner": { "email": "admin@lvh.me", "password": "..." }
     },
     {
-        "name": "Demo1 Tenant",
-        "schema_name": "demo1",
-        "subdomain": "demo1",
-        "owner": { "email": "admin@demo1.lvh.me", "password": "..." }
+        "name": "Demo Tenant",
+        "schema_name": "demo",
+        "subdomain": "demo",
+        "owner": { "email": "admin@demo.lvh.me", "password": "..." }
     }
 ]
 ```
@@ -60,5 +60,5 @@ python manage.py populate_db
 
 * **User Model**: Inherits from `UserProfile`. Users are global and live in the `public` schema. Authentication is shared, but authorization is per-tenant.
 * **Tenant Model**: Inherits from `TenantBase`. Represents a customer and maps to a specific PostgreSQL schema.
-* **Domain Model**: Inherits from `DomainMixin`. Routes incoming HTTP requests (e.g., `demo1.lvh.me`) to the correct tenant schema.
+* **Domain Model**: Inherits from `DomainMixin`. Routes incoming HTTP requests (e.g., `demo.lvh.me`) to the correct tenant schema.
 * **Provisioning**: The `provision_tenant` utility handles the complex logic of creating the schema, setting up the domain, and assigning initial permissions to the owner.

@@ -68,16 +68,16 @@ A complete task management system with tenant permissions and user assignment fo
 
 **Migrations:**
 
-- `tasks/migrations/0002_*.py` - Database schema updates
+- `tasks/migrations/0001_*.py` - Database schema updates
 
 ## 🚀 Tasks App Test
 
 1. **Start the server**: `python manage.py runserver`
-2. **Visit a tenant**: `http://demo1.lvh.me:8000/`
+2. **Visit a tenant**: `http://demo.lvh.me:8000/`
 3. **Navigate to**:
    - Projects: Click "Projects" in navbar
    - Tasks: Click "Tasks" in navbar
 4. **Create projects and tasks**
 5. **Assign tasks to users**
 6. **Filter and search**
-7. **Test tenant isolation** (demo1 vs demo2)
+7. **Test tenant isolation** (e.g., demo1 vs demo2)

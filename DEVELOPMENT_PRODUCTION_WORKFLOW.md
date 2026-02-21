@@ -55,12 +55,12 @@ django-multi-tenant/
 |   |
 |   ├── static/blog/                        # Static files for the blog app
 |   ├── templates/                          # HTML templates for the blog app
-|   |    ├── blog/                          # Templates for the blog app
-|   |    ├── article_confirm_delete.html    # Template for deleting an article
-|   |    ├── article_detail.html            # Template for viewing an article
-|   |    ├── article_form.html              # Template for creating or editing an article
-|   |    └── article_list.html              # Template for displaying a list of articles
-|   |
+|   |   └── blog/                          # Templates for the blog app
+|   |       ├── article_confirm_delete.html    # Template for deleting an article
+|   |       ├── article_detail.html            # Template for viewing an article
+|   |       ├── article_form.html              # Template for creating or editing an article
+|   |       └──article_list.html              # Template for displaying a list of articles
+|   |   
 |   ├── __init__.py         # Initialization for the blog app
 |   ├── admin.py            # Admin interface configuration
 |   ├── apps.py             # App configuration

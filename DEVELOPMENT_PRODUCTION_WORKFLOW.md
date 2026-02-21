@@ -19,10 +19,19 @@ django-multi-tenant/
 │
 ├── accounts/                 # User authentication and registration
 |   ├── migrations/           # Database migrations for the accounts app
-|   |    ├── __init__.py      # Initialization for migrations
-|   |    └── 0001_initial.py  # Initial migration file
+|   |   ├── __init__.py      # Initialization for migrations
+|   |   └── 0001_initial.py  # Initial migration file
 |   |
-|   ├── templates/accounts/   # HTML templates for the accounts app
+|   ├── templates/   # HTML templates for the accounts app
+|   |   └── accounts/   # Templates for the accounts app
+|   |       ├── login.html                     # Login page template
+|   |       ├── onboarding.html                # Onboarding page template
+|   |       ├── password_reset_confirm.html    # Password reset confirmation page template
+|   |       ├── password_reset_done.html       # Password reset done page template
+|   |       ├── password_reset_email.html      # Password reset email template
+|   |       ├── password_reset_form.html       # Password reset form template
+|   |       └── signup.html                    # Signup page template
+|   |    
 |   ├── __init__.py # Initialization for the accounts app
 |   ├── admin.py    # Admin interface configuration
 |   ├── apps.py     # App configuration
@@ -90,7 +99,7 @@ django-multi-tenant/
 |   |    ├── style.css          # CSS files for the core app
 |   |    └── scripts.js         # JavaScript files for the core app
 |   | 
-|   └── favicon.ico             # Favicon file
+|   └── favicon.ico             # Favicon file(for the entire project)
 |
 ├── staticfiles/                # Collected static files for production
 |
@@ -138,15 +147,6 @@ django-multi-tenant/
 |   |   
 |   ├── core/               # Templates for the core app
 |   |    └── index.html     # Home page template for the public schema
-|   |
-|   ├── registration/                      # Templates for the registration app
-|   |    ├── login.html                     # Login page template
-|   |    ├── onboarding.html                # Onboarding page template
-|   |    ├── password_reset_confirm.html    # Password reset confirmation page template
-|   |    ├── password_reset_done.html       # Password reset done page template
-|   |    ├── password_reset_email.html      # Password reset email template
-|   |    ├── password_reset_form.html       # Password reset form template
-|   |    └── signup.html                    # Signup page template
 |   |
 |   ├── 403.html                # 403 Forbidden error page
 |   ├── 404.html                # 404 Not Found error page

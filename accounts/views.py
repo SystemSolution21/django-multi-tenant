@@ -28,12 +28,12 @@ logger = structlog.get_logger()
 
 class SignUpView(CreateView):
     """
-    View for user registration/signup.
+    View for user account creation/signup.
     """
 
     form_class = CustomUserCreationForm
     success_url: str | Callable[..., Any] | None = reverse_lazy("onboarding")
-    template_name = "registration/signup.html"
+    template_name = "accounts/signup.html"
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         """
@@ -116,7 +116,7 @@ class OnboardingView(LoginRequiredMixin, FormView):
     View to onboard a new user by asking for their first project.
     """
 
-    template_name = "registration/onboarding.html"
+    template_name = "accounts/onboarding.html"
     form_class = OnboardingForm
     success_url: str | Callable[..., Any] | None = reverse_lazy("index")
 

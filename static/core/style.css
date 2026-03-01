@@ -1,5 +1,10 @@
 /* static/core/style.css */
 /* Custom styles for the SaaS platform */
+/* Navbar Styles */
+.bg-steel {
+    background-color: #5f788a !important;
+}
+
 /* Sidebar Menu */
 #sidebarMenu {
     padding: 0.25rem 0.25rem !important;

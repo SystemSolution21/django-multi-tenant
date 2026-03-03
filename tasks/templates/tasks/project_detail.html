@@ -19,7 +19,7 @@
         <h5 class="card-title">Project Details</h5>
         <dl class="row">
             <dt class="col-sm-3">Description:</dt>
-            <dd class="col-sm-9">{{ project.description|default:"No description provided" }}</dd>
+            <dd class="col-sm-9">{{ project.description|default:"No description provided"|linebreaks }}</dd>
 
             <dt class="col-sm-3">Owner:</dt>
             <dd class="col-sm-9">{{ project.owner.email|default:"Unassigned" }}</dd>
@@ -99,7 +99,7 @@
 </div>
 {% endif %}
 
-<div class="mt-4">
+<div class="mb-4">
     <a href="{% url 'project_list' %}" class="btn btn-secondary">Back to Projects</a>
 </div>
 {% endblock %}

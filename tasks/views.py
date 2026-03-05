@@ -67,7 +67,7 @@ class ProjectListView(LoginRequiredMixin, TenantSchemaRequiredMixin, ListView):
     model = Project
     template_name = "tasks/project_list.html"
     context_object_name = "projects"
-    paginate_by = 20
+    paginate_by = 9
 
     def get_queryset(self) -> QuerySet[Project]:
         return Project.objects.select_related("owner").all()
@@ -191,7 +191,7 @@ class TaskListView(LoginRequiredMixin, TenantSchemaRequiredMixin, ListView):
     model = Task
     template_name = "tasks/task_list.html"
     context_object_name = "tasks"
-    paginate_by = 20
+    paginate_by = 9
 
     def get_queryset(self) -> QuerySet[Task]:
         queryset = Task.objects.select_related("project", "assignee").all()

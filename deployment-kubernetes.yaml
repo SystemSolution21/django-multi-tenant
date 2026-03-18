@@ -10,8 +10,152 @@ metadata:
   name: django-config
   namespace: django-multi-tenant-kubernetes
 data:
-  DEBUG: "True"
-  DJANGO_SETTINGS_MODULE: "config.settings.local"
+  DJANGO_SETTINGS_MODULE: "core.settings"
+  DJANGO_ENV: "production"
+  DEBUG: "False"
+  ALLOWED_HOSTS: "*"
+  BASE_DOMAIN: "lvh.me"
+  PUBLIC_TENANT_ADMIN_EMAIL: "admin@lvh.me"
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+  SECURE_SSL_REDIRECT: "False"
+  SESSION_COOKIE_SECURE: "False"
+  CSRF_COOKIE_SECURE: "False"
+  EMAIL_BACKEND: "django.core.mail.backends.smtp.EmailBackend"
+  EMAIL_USE_TLS: "True"
+  EMAIL_HOST: "smtp.gmail.com"
+  EMAIL_PORT: "587"
+  CONSOLE_LOG_LEVEL: "INFO"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: django-secrets
+  namespace: django-multi-tenant-kubernetes
+type: Opaque
+stringData:
+  SECRET_KEY: "django-insecure-9!xkknqg2)%y!liiwvy9i_o*za%qitsl!7*mk-406&ihc)p$$pr"
+  EMAIL_HOST_USER: "systemsolution21@gmail.com"
+  EMAIL_HOST_PASSWORD: ""
+  DEFAULT_FROM_EMAIL: "systemsolution21@gmail.com"
+  PUBLIC_TENANT_ADMIN_PASSWORD: "password"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: django-multi-tenant-kubernetes
+type: Opaque
+stringData:
+  POSTGRES_DB: django_multi_tenant_db
+  POSTGRES_USER: django_multi_tenant_user
+  POSTGRES_PASSWORD: django_multi_tenant_password
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: django-multi-tenant-kubernetes
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: django-multi-tenant-kubernetes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: django-multi-tenant-kubernetes
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  clusterIP: None
 
 ---
 apiVersion: apps/v1
@@ -29,43 +173,256 @@ spec:
       labels:
         app: django-multi-tenant
     spec:
-      containers:
-        - name: django
-          image: django-multi-tenant:v0.1.0
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8000
-              name: http
+      initContainers:
+        - name: db-wait
+          image: systemsolution21/django-multi-tenant:v0.1.0
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for PostgreSQL to be ready..."
+              until pg_isready -h postgres-service -p 5432 -U $POSTGRES_USER -d $POSTGRES_DB; do
+                echo "PostgreSQL unavailable - retrying in 2 seconds..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
           env:
-            - name: DEBUG
+            - name: POSTGRES_USER
               valueFrom:
-                configMapKeyRef:
-                  name: django-config
-                  key: DEBUG
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+        - name: db-migrate
+          image: systemsolution21/django-multi-tenant:v0.1.0
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Running database migrations..."
+              python manage.py migrate_schemas --noinput
+              echo "Initializing public tenant..."
+              python manage.py init_public_tenant
+              echo "Migrations complete!"
+          env:
             - name: DJANGO_SETTINGS_MODULE
               valueFrom:
                 configMapKeyRef:
                   name: django-config
                   key: DJANGO_SETTINGS_MODULE
+            - name: DJANGO_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DJANGO_ENV
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DEBUG
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: SECRET_KEY
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DATABASE_HOST
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DATABASE_PORT
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: POSTGRES_PORT
+      containers:
+        - name: django
+          image: systemsolution21/django-multi-tenant:v0.1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DJANGO_SETTINGS_MODULE
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DJANGO_SETTINGS_MODULE
+            - name: DJANGO_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DJANGO_ENV
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DEBUG
+            - name: ALLOWED_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: ALLOWED_HOSTS
+            - name: BASE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: BASE_DOMAIN
+            - name: PUBLIC_TENANT_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: PUBLIC_TENANT_ADMIN_EMAIL
+            - name: PUBLIC_TENANT_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: PUBLIC_TENANT_ADMIN_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: SECRET_KEY
+            - name: SECURE_SSL_REDIRECT
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: SECURE_SSL_REDIRECT
+            - name: SESSION_COOKIE_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: SESSION_COOKIE_SECURE
+            - name: CSRF_COOKIE_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: CSRF_COOKIE_SECURE
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DATABASE_HOST
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: DATABASE_PORT
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: EMAIL_BACKEND
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: EMAIL_BACKEND
+            - name: EMAIL_USE_TLS
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: EMAIL_USE_TLS
+            - name: EMAIL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: EMAIL_HOST
+            - name: EMAIL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: EMAIL_PORT
+            - name: EMAIL_HOST_USER
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: EMAIL_HOST_USER
+            - name: EMAIL_HOST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: EMAIL_HOST_PASSWORD
+            - name: DEFAULT_FROM_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: DEFAULT_FROM_EMAIL
+            - name: CONSOLE_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: CONSOLE_LOG_LEVEL
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
-            limits:
               memory: "256Mi"
-              cpu: "200m"
+              cpu: "150m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
           livenessProbe:
             httpGet:
-              path: /health/
+              path: /
               port: 8000
-            initialDelaySeconds: 20
+            initialDelaySeconds: 30
             periodSeconds: 10
+            failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /ready/
+              path: /
               port: 8000
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             periodSeconds: 5
+            failureThreshold: 3
 
 ---
 apiVersion: v1

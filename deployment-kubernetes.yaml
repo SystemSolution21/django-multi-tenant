@@ -4,56 +4,8 @@ metadata:
   name: django-multi-tenant-kubernetes
 
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: django-config
-  namespace: django-multi-tenant-kubernetes
-data:
-  DJANGO_SETTINGS_MODULE: "core.settings"
-  DJANGO_ENV: "production"
-  DEBUG: "False"
-  ALLOWED_HOSTS: "*"
-  BASE_DOMAIN: "lvh.me"
-  PUBLIC_TENANT_ADMIN_EMAIL: "admin@lvh.me"
-  DATABASE_HOST: "postgres-service"
-  DATABASE_PORT: "5432"
-  POSTGRES_HOST: "postgres-service"
-  POSTGRES_PORT: "5432"
-  SECURE_SSL_REDIRECT: "False"
-  SESSION_COOKIE_SECURE: "False"
-  CSRF_COOKIE_SECURE: "False"
-  EMAIL_BACKEND: "django.core.mail.backends.smtp.EmailBackend"
-  EMAIL_USE_TLS: "True"
-  EMAIL_HOST: "smtp.gmail.com"
-  EMAIL_PORT: "587"
-  CONSOLE_LOG_LEVEL: "INFO"
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: django-secrets
-  namespace: django-multi-tenant-kubernetes
-type: Opaque
-stringData:
-  SECRET_KEY: "django-insecure-9!xkknqg2)%y!liiwvy9i_o*za%qitsl!7*mk-406&ihc)p$$pr"
-  EMAIL_HOST_USER: "systemsolution21@gmail.com"
-  EMAIL_HOST_PASSWORD: ""
-  DEFAULT_FROM_EMAIL: "systemsolution21@gmail.com"
-  PUBLIC_TENANT_ADMIN_PASSWORD: "password"
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: postgres-secret
-  namespace: django-multi-tenant-kubernetes
-type: Opaque
-stringData:
-  POSTGRES_DB: django_multi_tenant_db
-  POSTGRES_USER: django_multi_tenant_user
-  POSTGRES_PASSWORD: django_multi_tenant_password
+# ConfigMap and Secrets are created via kubectl from .env file
+# See deploy-k8s.sh script
 
 ---
 apiVersion: v1
@@ -175,8 +127,8 @@ spec:
     spec:
       initContainers:
         - name: db-wait
-          image: systemsolution21/django-multi-tenant:v0.1.0
-          imagePullPolicy: Always
+          image: postgres:17-alpine
+          imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
           args:
             - |
@@ -197,77 +149,20 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_DB
-        - name: db-migrate
-          image: systemsolution21/django-multi-tenant:v0.1.0
-          imagePullPolicy: Always
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              echo "Running database migrations..."
-              python manage.py migrate_schemas --noinput
-              echo "Initializing public tenant..."
-              python manage.py init_public_tenant
-              echo "Migrations complete!"
-          env:
-            - name: DJANGO_SETTINGS_MODULE
-              valueFrom:
-                configMapKeyRef:
-                  name: django-config
-                  key: DJANGO_SETTINGS_MODULE
-            - name: DJANGO_ENV
-              valueFrom:
-                configMapKeyRef:
-                  name: django-config
-                  key: DJANGO_ENV
-            - name: DEBUG
-              valueFrom:
-                configMapKeyRef:
-                  name: django-config
-                  key: DEBUG
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: django-secrets
-                  key: SECRET_KEY
-            - name: DATABASE_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: django-config
-                  key: DATABASE_HOST
-            - name: DATABASE_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: django-config
-                  key: DATABASE_PORT
-            - name: POSTGRES_DB
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-secret
-                  key: POSTGRES_DB
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-secret
-                  key: POSTGRES_USER
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-secret
-                  key: POSTGRES_PASSWORD
-            - name: POSTGRES_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: django-config
-                  key: POSTGRES_HOST
-            - name: POSTGRES_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: django-config
-                  key: POSTGRES_PORT
       containers:
         - name: django
           image: systemsolution21/django-multi-tenant:v0.1.0
           imagePullPolicy: Always
+          command: ["/app/entrypoint.sh"]
+          args:
+            [
+              "gunicorn",
+              "core.wsgi:application",
+              "--bind",
+              "0.0.0.0:8000",
+              "--timeout",
+              "60",
+            ]
           ports:
             - containerPort: 8000
               name: http
@@ -410,15 +305,13 @@ spec:
               memory: "512Mi"
               cpu: "300m"
           livenessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 5
